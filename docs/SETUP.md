@@ -64,12 +64,65 @@ Front-end code is in. Before sign-up / login will work end-to-end you need to:
       `update profiles set role='admin', status='active' where email='you@firm.com';`
 - [ ] Refresh — the pending banner should disappear
 
-## Milestone 3 — full schema (next)
+## Milestone 3 — full schema
 
-- [ ] Run the Milestone 3 SQL (`docs/sql/02_milestone3_schema.sql`) to
-      create `credit_ledger`, `dpr_jobs`, `audit_log`, and storage buckets
-- [ ] Create `dpr-uploads` and `dpr-reports` storage buckets (private)
-- [ ] Apply storage RLS policies
+SQL is ready in `docs/sql/02_milestone3_schema.sql`. Apply it after the
+Milestone 2 migration.
+
+- [ ] Open the Supabase SQL editor
+- [ ] Paste and run `docs/sql/02_milestone3_schema.sql`
+
+The script creates **tables**, **indexes**, the `credit_balance(uid)` helper,
+**RLS policies**, **storage buckets**, **storage policies**, and turns on
+**realtime** for `dpr_jobs`.
+
+Verify with the three sanity-check queries at the bottom of the file:
+
+```sql
+-- 1) tables exist
+select table_name from information_schema.tables
+  where table_schema = 'public' order by table_name;
+-- expected: audit_log, credit_ledger, dpr_jobs, profiles
+
+-- 2) policies are wired up
+select tablename, policyname from pg_policies
+  where schemaname in ('public','storage') order by tablename, policyname;
+-- expected (public):
+--   audit_log    : audit read
+--   credit_ledger: credits read
+--   dpr_jobs     : jobs read, jobs insert, jobs update
+--   profiles     : profile read, profile update
+-- expected (storage.objects):
+--   admin writes reports, read own reports, read own uploads,
+--   upload to own folder
+
+-- 3) buckets exist and are private
+select id, public, file_size_limit from storage.buckets
+  where id in ('dpr-uploads','dpr-reports');
+-- expected: both rows, public = false
+```
+
+If the `insert into storage.buckets` step throws a permission error (rare —
+some older projects), create the two buckets manually in **Storage → New
+bucket**:
+
+- `dpr-uploads` — **uncheck** "Public bucket", set file size limit to 300 MB
+- `dpr-reports` — **uncheck** "Public bucket", set file size limit to 200 MB
+
+Then re-run just the policies section (everything from
+`-- 5. Storage RLS policies` onward).
+
+Optional smoke test once your account is admin/active:
+
+```sql
+-- give yourself 10 trial credits (server-side write, bypasses RLS)
+insert into credit_ledger (user_id, delta, reason)
+  values ((select id from profiles where email='you@firm.com'), 10, 'grant');
+
+-- read it back via the helper
+select credit_balance((select id from profiles where email='you@firm.com'));
+-- expected: 10
+```
 
 ## Misc
 

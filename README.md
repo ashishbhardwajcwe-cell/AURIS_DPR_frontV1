@@ -12,9 +12,10 @@ delivered back into the portal by a human operator.
 
 ## Status
 
-Milestone 2 — Supabase Auth (email/password + Google OAuth), profile creation
-on signup, pending-approval state. Upload flow and admin tooling land in
-subsequent milestones (see `docs/SETUP.md` for the live checklist).
+Milestone 3 — full schema (credit ledger, jobs, audit log), private storage
+buckets, RLS, realtime on jobs. The client dashboard with live credit
+balance + jobs table lands in Milestone 4. See `docs/SETUP.md` for the
+live operator checklist.
 
 ## Tech stack
 
