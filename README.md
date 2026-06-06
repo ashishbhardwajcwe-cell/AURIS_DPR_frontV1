@@ -12,10 +12,10 @@ delivered back into the portal by a human operator.
 
 ## Status
 
-Milestone 6 — all four upload-flow Netlify Functions (`request-upload`,
-`confirm-upload`, `cancel-upload`, `get-download-url`) plus the client wiring
-for cancel-mid-upload and short-lived signed download URLs. Job detail with
-the actual download buttons / audio player lands in Milestone 7.
+Milestone 7 — real job detail page with status timeline (Submitted → In Review
+→ Completed), inline `<audio>` player, "Download report (PDF)" button,
+operator summary, and live status flips via realtime. Resend notifications
+(Milestone 8) are next.
 
 ## Tech stack
 
