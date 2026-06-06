@@ -8,15 +8,22 @@
 [build.environment]
   NODE_VERSION = "20"
 
-# SPA fallback — every non-asset route should serve index.html so React Router
-# can take over on the client.
+# /api/* paths are claimed by the v2 functions via their `export const
+# config = { path: '/api/...' }` blocks. This redirect is belt-and-braces
+# in case any future function uses the legacy v1 invocation path.
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+
+# SPA fallback — every non-asset, non-API route should serve index.html
+# so React Router can take over on the client.
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
 
-# Security headers. The Supabase URL injected at build time is allowed
-# because the React client talks to Supabase Storage/Auth directly.
+# Security headers.
 [[headers]]
   for = "/*"
   [headers.values]
