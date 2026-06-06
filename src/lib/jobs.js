@@ -75,3 +75,27 @@ export function subscribeToUserJobs(userId, onChange) {
     supabase.removeChannel(channel);
   };
 }
+
+// Subscribes to live changes on one specific job. Works for both job
+// owners and admins viewing another firm's job — the filter is by job
+// id, not by user.
+export function subscribeToJob(jobId, onChange) {
+  if (!supabase || !jobId) return () => {};
+  const channel = supabase
+    .channel(`dpr_jobs:job:${jobId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'dpr_jobs',
+        filter: `id=eq.${jobId}`,
+      },
+      (payload) => onChange?.(payload)
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}

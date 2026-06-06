@@ -252,6 +252,59 @@ Expect a 404 ("No report file is available for this job yet.") until you
 upload a report path into the job row — that's the admin flow in
 Milestone 9.
 
+## Milestone 7 — job detail page
+
+`/jobs/:jobId` is now the real client-facing job view: status timeline,
+deliverables card (with report download + inline audio player), failed
+state with refund acknowledgement, realtime updates that work for both
+job owners and admins.
+
+### End-to-end smoke (needs Milestones 2–6 applied)
+
+The proper admin flow lands in Milestone 9; for now you can fake the
+operator deliverables straight from SQL + the Supabase storage UI.
+
+- [ ] Sign in as a client and upload any PDF/XLSX from `/upload`
+- [ ] Note the resulting `/jobs/:id` URL
+- [ ] The page should show the **Submitted** step active and the
+      "In our queue" message
+- [ ] Flip to in-review in SQL:
+      ```sql
+      update dpr_jobs set status='in_review' where id = <id>;
+      ```
+      The badge + timeline should update without a refresh (realtime)
+- [ ] Manually drop a `report.pdf` and `audio.mp3` into Supabase
+      Storage → `dpr-reports/<user_id>/<job_id>/` and mark the job done:
+      ```sql
+      update dpr_jobs
+        set status        = 'completed',
+            completed_at  = now(),
+            report_path   = '<user_id>/<job_id>/report.pdf',
+            audio_path    = '<user_id>/<job_id>/audio.mp3',
+            operator_summary = 'Reviewed the geometric design and pavement composition. See the report for the full IRC compliance matrix.'
+        where id = <id>;
+      ```
+- [ ] Without refreshing, the page should flip to **Completed**, show
+      the summary, render the inline audio player, and offer the
+      Download report button
+- [ ] Click **Download report (PDF)** → the file downloads
+- [ ] Press play on the audio player → the MP3 streams
+
+### Failed state
+
+- [ ] Pick another job and run:
+      ```sql
+      update dpr_jobs
+        set status   = 'failed',
+            completed_at = now(),
+            operator_summary = 'Drawings were missing the cross-section sheets we need for the IRC:73 review. Re-upload with sheets DGN-001 to DGN-018 included.'
+        where id = <id>;
+      insert into credit_ledger (user_id, delta, reason, dpr_job_id)
+        values ((select user_id from dpr_jobs where id=<id>), 1, 'refund', <id>);
+      ```
+- [ ] The page shows the failure note + "Your credit has been refunded"
+- [ ] Dashboard balance bumps back up via the realtime subscription
+
 ## Misc
 
 - [ ] Replace `/public/auris-logo.svg` placeholder with the real brand asset
