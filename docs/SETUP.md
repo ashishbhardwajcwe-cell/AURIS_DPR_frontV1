@@ -215,6 +215,43 @@ The client switches to **TUS resumable** via `tus-js-client`. A dropped
 connection resumes from the last completed chunk (6 MB). Smaller files
 use a single PUT to the signed URL with native XHR progress.
 
+## Milestone 6 — cancel-upload + get-download-url
+
+Two more Netlify Functions land in this milestone. No new env vars; the
+existing `SUPABASE_SERVICE_ROLE_KEY` is enough.
+
+| Endpoint | Used by | What it does |
+| --- | --- | --- |
+| `/api/cancel-upload` | Cancel button on Upload page | Deletes any partially-uploaded bytes from `dpr-uploads`, deletes the `dpr_jobs` row, writes an `upload_cancelled` audit entry. Refuses to cancel a confirmed job (one with a `dpr_submission` ledger row) — those belong to the operator queue. |
+| `/api/get-download-url` | Job detail (M7) + admin (M9) | Mints a 10-minute Supabase signed URL for `kind=report` / `audio` (job owner OR admin) or `kind=upload` + `uploadIndex` (admin only). Writes a `download_url_minted` audit entry. |
+
+Smoke test for cancel:
+
+- [ ] Start an upload of a large-ish file
+- [ ] While the progress bar is moving, click **Cancel upload**
+- [ ] Confirm the job disappears from the dashboard
+- [ ] In SQL: `select * from audit_log where action='upload_cancelled'
+      order by id desc limit 1;` shows the entry
+- [ ] In Storage → `dpr-uploads/{user_id}/`, the abandoned files are gone
+
+Smoke test for downloads (you'll exercise this fully in Milestone 7):
+
+```sh
+# from a logged-in browser tab, with jobId from the URL:
+fetch('/api/get-download-url', {
+  method: 'POST',
+  headers: {
+    'content-type': 'application/json',
+    authorization: 'Bearer ' + (await window.supabase.auth.getSession()).data.session.access_token
+  },
+  body: JSON.stringify({ jobId: 1, kind: 'report' })
+}).then(r => r.json()).then(console.log);
+```
+
+Expect a 404 ("No report file is available for this job yet.") until you
+upload a report path into the job row — that's the admin flow in
+Milestone 9.
+
 ## Misc
 
 - [ ] Replace `/public/auris-logo.svg` placeholder with the real brand asset
