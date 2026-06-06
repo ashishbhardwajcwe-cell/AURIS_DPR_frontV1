@@ -6,26 +6,7 @@
 -- =============================================================================
 
 -- -----------------------------------------------------------------------------
--- 1. is_admin() helper — used by RLS on every protected table.
---    SECURITY DEFINER so it can read profiles regardless of caller policies.
--- -----------------------------------------------------------------------------
-create or replace function public.is_admin()
-returns boolean
-language sql
-security definer
-stable
-set search_path = public
-as $$
-  select exists (
-    select 1
-    from public.profiles
-    where id = auth.uid()
-      and role = 'admin'
-  );
-$$;
-
--- -----------------------------------------------------------------------------
--- 2. profiles table — one row per auth.users row.
+-- 1. profiles table — one row per auth.users row.
 --    company_name is intentionally nullable so Google OAuth signups can create
 --    a profile and fill it in via /complete-profile. Application code refuses
 --    to activate accounts without it.
@@ -42,6 +23,27 @@ create table if not exists public.profiles (
                  check (status in ('pending', 'active', 'suspended')),
   created_at   timestamptz not null default now()
 );
+
+-- -----------------------------------------------------------------------------
+-- 2. is_admin() helper — used by RLS on every protected table.
+--    SECURITY DEFINER so it can read profiles regardless of caller policies.
+--    Defined after profiles exists because Postgres validates SQL-language
+--    function bodies at CREATE time.
+-- -----------------------------------------------------------------------------
+create or replace function public.is_admin()
+returns boolean
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.profiles
+    where id = auth.uid()
+      and role = 'admin'
+  );
+$$;
 
 -- -----------------------------------------------------------------------------
 -- 3. Row-level security on profiles.
