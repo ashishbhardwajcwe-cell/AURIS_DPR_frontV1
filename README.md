@@ -12,9 +12,10 @@ delivered back into the portal by a human operator.
 
 ## Status
 
-Milestone 4 — client dashboard with live credit balance, "Upload a DPR" CTA,
-jobs table, and realtime status updates. Upload flow lands in Milestone 5.
-See `docs/SETUP.md` for the live operator checklist.
+Milestone 5 — end-to-end upload flow. The browser uploads directly to private
+Supabase Storage via signed URLs (small files) or TUS resumable (> 50 MB).
+Two Netlify Functions broker the handshake. Nothing in this codebase ever
+parses an uploaded file. See `docs/SETUP.md` for the operator checklist.
 
 ## Tech stack
 

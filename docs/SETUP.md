@@ -158,6 +158,63 @@ End-to-end test (requires Milestones 2 + 3 applied):
       update dpr_jobs set status='in_review' where project_name like 'NH-44%';
       ```
 
+## Milestone 5 — upload flow
+
+The browser uploads files **directly** to Supabase Storage. Two Netlify
+Functions broker the handshake. Nothing in this repo ever parses a file.
+
+### Wire the server-side env vars in Netlify
+
+The functions need the **service-role key** in addition to the URL/anon
+already set up:
+
+- [ ] In Netlify → Site settings → Environment variables, add:
+  - `SUPABASE_SERVICE_ROLE_KEY` — from Supabase project settings → API
+  - (Optional) `OPERATOR_EMAIL` — placeholder for Milestone 8
+
+### Test it locally
+
+The dev experience uses the Netlify CLI to proxy both Vite and the
+functions through a single port (so `/api/*` and the React app share an
+origin):
+
+```bash
+npm install -g netlify-cli   # one-time
+netlify dev                  # boots Vite + functions, usually on :8888
+```
+
+Open <http://localhost:8888> and:
+
+- [ ] Log in as a client that has been activated + given ≥ 1 credit
+- [ ] Click **Upload a DPR**, fill in project name, drop a small `.pdf`
+      or `.xlsx`
+- [ ] Watch the per-file progress bar fill and the overall bar follow
+- [ ] On success you should be redirected to `/jobs/:id`
+- [ ] In Supabase → Storage → `dpr-uploads` you should see the file at
+      `{user_id}/{job_id}/{safe_name}`
+- [ ] In Supabase → SQL editor: `select * from credit_ledger order by id desc limit 5;`
+      shows a new `-1, reason='dpr_submission'` row
+- [ ] `select * from audit_log order by id desc limit 5;` shows a
+      `dpr_submitted` entry
+
+### Validations the API enforces
+
+| Rule | Where |
+| --- | --- |
+| User is signed in + `status='active'` | `requireActiveClient` |
+| `credit_balance ≥ 1` | `request-upload` (live RPC) |
+| Each file ≤ 300 MB, total ≤ 500 MB | `validateFiles` (and client mirror) |
+| Allowed extensions: xlsx/xls/csv/pdf/docx/zip | `validateFiles` |
+| Filenames stripped to `[A-Za-z0-9._-]` | `safeFilename` |
+| Credit deducted only after a successful upload | `/api/confirm-upload` |
+| Double-confirm is a no-op | ledger pre-check in `confirm-upload` |
+
+### Files > 50 MB
+
+The client switches to **TUS resumable** via `tus-js-client`. A dropped
+connection resumes from the last completed chunk (6 MB). Smaller files
+use a single PUT to the signed URL with native XHR progress.
+
 ## Misc
 
 - [ ] Replace `/public/auris-logo.svg` placeholder with the real brand asset
