@@ -12,9 +12,9 @@ delivered back into the portal by a human operator.
 
 ## Status
 
-Milestone 1 — scaffold, theme, routing, public pages. Auth, upload flow, and
-the admin tooling land in subsequent milestones (see the build plan in the
-project brief).
+Milestone 2 — Supabase Auth (email/password + Google OAuth), profile creation
+on signup, pending-approval state. Upload flow and admin tooling land in
+subsequent milestones (see `docs/SETUP.md` for the live checklist).
 
 ## Tech stack
 
@@ -56,13 +56,15 @@ into the React bundle.
 
 ```
 src/
-  components/      Header, Footer, Layout shell
-  pages/           Public + (later) authenticated screens
+  components/      Header, Footer, Layout, FormField, Button, etc.
+  pages/           Landing, Login, SignUp, AuthCallback, CompleteProfile,
+                   Dashboard, Privacy, Confidentiality
+  lib/             Supabase client + AuthProvider/useAuth
   styles/          theme.js design tokens + global.css
-  lib/             (later) Supabase client, helpers
 public/            Static assets (AURIS logo, NDA template, etc.)
 netlify/functions/ (later) request-upload, confirm-upload, etc.
 docs/              Operator-facing setup notes
+  sql/             Versioned SQL migrations to paste into Supabase
 ```
 
 ## What is intentionally NOT here

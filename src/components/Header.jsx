@@ -1,5 +1,6 @@
-import { Link, NavLink } from 'react-router-dom';
-import { colors, gradients, fonts, layout, spacing } from '../styles/theme.js';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { useAuth } from '../lib/auth.jsx';
+import { colors, gradients, fonts, layout, radii, spacing } from '../styles/theme.js';
 
 const headerStyle = {
   background: gradients.hero,
@@ -56,7 +57,7 @@ const taglineStyle = {
 const navStyle = {
   display: 'flex',
   alignItems: 'center',
-  gap: spacing.md,
+  gap: spacing.sm,
 };
 
 const linkBase = {
@@ -69,7 +70,7 @@ const linkBase = {
   transition: 'color 120ms ease, background 120ms ease',
 };
 
-const loginBtnStyle = {
+const ctaButtonStyle = {
   ...linkBase,
   background: colors.tealPrimary,
   color: colors.textOnDark,
@@ -77,11 +78,61 @@ const loginBtnStyle = {
   fontWeight: 600,
 };
 
+const ghostButtonStyle = {
+  ...linkBase,
+  border: '1px solid rgba(255,255,255,0.18)',
+  padding: '8px 14px',
+  background: 'transparent',
+  cursor: 'pointer',
+};
+
+const pendingBadgeStyle = {
+  fontFamily: fonts.body,
+  fontSize: '11.5px',
+  fontWeight: 600,
+  letterSpacing: '0.06em',
+  textTransform: 'uppercase',
+  color: '#FCD34D',
+  background: 'rgba(252, 211, 77, 0.12)',
+  border: '1px solid rgba(252, 211, 77, 0.35)',
+  padding: '4px 10px',
+  borderRadius: radii.pill,
+};
+
+const userPillStyle = {
+  fontFamily: fonts.body,
+  fontSize: '13px',
+  color: colors.textOnDarkMuted,
+  padding: '6px 12px',
+  borderRadius: radii.pill,
+  background: 'rgba(255,255,255,0.06)',
+  border: '1px solid rgba(255,255,255,0.08)',
+  maxWidth: '180px',
+  whiteSpace: 'nowrap',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+};
+
 export default function Header() {
+  const navigate = useNavigate();
+  const { isAuthenticated, isPending, profile, user, signOut } = useAuth();
+
+  async function handleSignOut() {
+    await signOut();
+    navigate('/', { replace: true });
+  }
+
+  const displayLabel =
+    profile?.company_name || profile?.contact_name || user?.email || '';
+
   return (
     <header style={headerStyle}>
       <div className="container" style={innerStyle}>
-        <Link to="/" style={brandStyle} aria-label="DPR Analyzer Pro home">
+        <Link
+          to={isAuthenticated ? '/dashboard' : '/'}
+          style={brandStyle}
+          aria-label="DPR Analyzer Pro home"
+        >
           <img
             src="/auris-logo.svg"
             alt="AURIS"
@@ -99,27 +150,59 @@ export default function Header() {
         </Link>
 
         <nav style={navStyle} aria-label="Primary">
-          <NavLink
-            to="/privacy"
-            style={({ isActive }) => ({
-              ...linkBase,
-              color: isActive ? colors.textOnDark : colors.textOnDarkMuted,
-            })}
-          >
-            Privacy
-          </NavLink>
-          <NavLink
-            to="/confidentiality"
-            style={({ isActive }) => ({
-              ...linkBase,
-              color: isActive ? colors.textOnDark : colors.textOnDarkMuted,
-            })}
-          >
-            Confidentiality
-          </NavLink>
-          <Link to="/login" style={loginBtnStyle}>
-            Log in
-          </Link>
+          {!isAuthenticated && (
+            <>
+              <NavLink
+                to="/privacy"
+                style={({ isActive }) => ({
+                  ...linkBase,
+                  color: isActive ? colors.textOnDark : colors.textOnDarkMuted,
+                })}
+              >
+                Privacy
+              </NavLink>
+              <NavLink
+                to="/confidentiality"
+                style={({ isActive }) => ({
+                  ...linkBase,
+                  color: isActive ? colors.textOnDark : colors.textOnDarkMuted,
+                })}
+              >
+                Confidentiality
+              </NavLink>
+              <Link to="/login" style={ctaButtonStyle}>
+                Log in
+              </Link>
+            </>
+          )}
+
+          {isAuthenticated && (
+            <>
+              {isPending && (
+                <span style={pendingBadgeStyle} title="Awaiting operator approval">
+                  Pending approval
+                </span>
+              )}
+              {displayLabel && (
+                <span style={userPillStyle} title={displayLabel}>
+                  {displayLabel}
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={handleSignOut}
+                style={ghostButtonStyle}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                }}
+              >
+                Sign out
+              </button>
+            </>
+          )}
         </nav>
       </div>
     </header>
