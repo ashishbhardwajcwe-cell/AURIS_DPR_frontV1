@@ -12,10 +12,10 @@ delivered back into the portal by a human operator.
 
 ## Status
 
-Milestone 5 — end-to-end upload flow. The browser uploads directly to private
-Supabase Storage via signed URLs (small files) or TUS resumable (> 50 MB).
-Two Netlify Functions broker the handshake. Nothing in this codebase ever
-parses an uploaded file. See `docs/SETUP.md` for the operator checklist.
+Milestone 6 — all four upload-flow Netlify Functions (`request-upload`,
+`confirm-upload`, `cancel-upload`, `get-download-url`) plus the client wiring
+for cancel-mid-upload and short-lived signed download URLs. Job detail with
+the actual download buttons / audio player lands in Milestone 7.
 
 ## Tech stack
 

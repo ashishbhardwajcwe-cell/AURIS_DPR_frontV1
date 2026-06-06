@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Alert from '../components/Alert.jsx';
 import Button from '../components/Button.jsx';
@@ -8,7 +8,12 @@ import UploadProgress from '../components/UploadProgress.jsx';
 import { useAuth } from '../lib/auth.jsx';
 import { getCreditBalance } from '../lib/credits.js';
 import { describeFileIssues } from '../lib/uploadLimits.js';
-import { requestUpload, confirmUpload, uploadFile } from '../lib/upload.js';
+import {
+  requestUpload,
+  confirmUpload,
+  cancelUpload,
+  uploadFile,
+} from '../lib/upload.js';
 import { formatBytes } from '../lib/format.js';
 import { colors, fonts, radii, shadows, spacing } from '../styles/theme.js';
 
@@ -85,6 +90,8 @@ export default function Upload() {
   const [items, setItems] = useState([]); // per-file progress
 
   const [balance, setBalance] = useState(null);
+  const [cancelling, setCancelling] = useState(false);
+  const abortRef = useRef(null);
 
   useEffect(() => {
     if (user?.id) {
@@ -115,6 +122,30 @@ export default function Upload() {
     setJobId(null);
     setErrorText(null);
     setPhase(PHASES.IDLE);
+    setCancelling(false);
+    abortRef.current = null;
+  }
+
+  async function handleCancel() {
+    if (cancelling) return;
+    setCancelling(true);
+
+    // Stop the in-flight XHR/TUS upload immediately.
+    abortRef.current?.abort();
+
+    // Best-effort server-side cleanup. Failures here are non-fatal — the
+    // retention reaper (Milestone 10) catches orphans either way.
+    if (jobId) {
+      try {
+        await cancelUpload({ jobId });
+      } catch (err) {
+        console.warn('[upload] cancel-upload failed:', err);
+      }
+    }
+
+    resetUploadState();
+    // Refresh balance in case anything was charged (it shouldn't be).
+    if (user?.id) getCreditBalance(user.id).then(setBalance);
   }
 
   const overallPercent = useMemo(() => {
@@ -136,6 +167,10 @@ export default function Upload() {
 
     try {
       setPhase(PHASES.STARTING);
+      // Fresh AbortController for this submission. The Cancel button
+      // calls .abort() on it, which propagates into both the XHR PUT
+      // path and the TUS resumable path.
+      abortRef.current = new AbortController();
 
       const { jobId: newJobId, files: signedFiles } = await requestUpload({
         projectName: projectName.trim(),
@@ -175,6 +210,7 @@ export default function Upload() {
             file,
             path: sf.path,
             signedUrl: sf.signedUrl,
+            signal: abortRef.current?.signal,
             onProgress: (pct) => {
               setItems((prev) =>
                 prev.map((it, j) =>
@@ -380,20 +416,42 @@ export default function Upload() {
             phase === PHASES.SUCCESS ||
             (phase === PHASES.FAILED && items.length > 0)) && (
             <div style={{ marginTop: spacing.lg }}>
-              <h3
+              <div
                 style={{
-                  fontFamily: fonts.heading,
-                  fontSize: '16px',
-                  color: colors.textPrimary,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: spacing.md,
                   marginBottom: spacing.md,
+                  flexWrap: 'wrap',
                 }}
               >
-                {phase === PHASES.CONFIRMING
-                  ? 'Finalising submission…'
-                  : phase === PHASES.SUCCESS
-                  ? 'Submitted'
-                  : 'Uploading'}
-              </h3>
+                <h3
+                  style={{
+                    fontFamily: fonts.heading,
+                    fontSize: '16px',
+                    color: colors.textPrimary,
+                    margin: 0,
+                  }}
+                >
+                  {phase === PHASES.CONFIRMING
+                    ? 'Finalising submission…'
+                    : phase === PHASES.SUCCESS
+                    ? 'Submitted'
+                    : 'Uploading'}
+                </h3>
+                {phase === PHASES.UPLOADING && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={handleCancel}
+                    disabled={cancelling}
+                    loading={cancelling}
+                  >
+                    Cancel upload
+                  </Button>
+                )}
+              </div>
               <UploadProgress items={items} overallPercent={overallPercent} />
             </div>
           )}

@@ -58,6 +58,10 @@ export function confirmUpload({ jobId, totalSizeBytes }) {
   return callApi('/api/confirm-upload', { jobId, totalSizeBytes });
 }
 
+export function cancelUpload({ jobId }) {
+  return callApi('/api/cancel-upload', { jobId });
+}
+
 // Strategy 1: small files — single PUT via XHR so we get real progress.
 // Mirrors what supabase.storage.uploadToSignedUrl does internally, plus
 // onprogress wiring.
