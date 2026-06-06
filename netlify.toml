@@ -1,0 +1,26 @@
+# Netlify configuration for DPR Analyzer Pro.
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+  functions = "netlify/functions"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# SPA fallback — every non-asset route should serve index.html so React Router
+# can take over on the client.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Security headers. The Supabase URL injected at build time is allowed
+# because the React client talks to Supabase Storage/Auth directly.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
