@@ -124,6 +124,40 @@ select credit_balance((select id from profiles where email='you@firm.com'));
 -- expected: 10
 ```
 
+## Milestone 4 — client dashboard
+
+Front-end is in. The dashboard at `/dashboard` reads from the schema you
+applied in Milestone 3 and subscribes to realtime updates on `dpr_jobs`.
+
+End-to-end test (requires Milestones 2 + 3 applied):
+
+- [ ] Sign in as a client account
+- [ ] Confirm the "Pending approval" banner shows while
+      `profiles.status = 'pending'`
+- [ ] In SQL, activate the account and grant 5 credits:
+      ```sql
+      update profiles set status='active' where email='client@firm.com';
+      insert into credit_ledger (user_id, delta, reason) values
+        ((select id from profiles where email='client@firm.com'), 5, 'grant');
+      ```
+- [ ] Reload the dashboard — the pending banner disappears, the balance
+      card reads **5**, and the "Upload a DPR" button is active
+- [ ] Insert a fake job in SQL and confirm it appears in the jobs table
+      without a manual refresh (realtime):
+      ```sql
+      insert into dpr_jobs (user_id, project_name, road_stretch, status)
+        values (
+          (select id from profiles where email='client@firm.com'),
+          'NH-44 widening — Hyderabad to Nagpur',
+          'KM 144+200 to 188+500',
+          'submitted'
+        );
+      ```
+- [ ] Update its status and watch the badge flip live:
+      ```sql
+      update dpr_jobs set status='in_review' where project_name like 'NH-44%';
+      ```
+
 ## Misc
 
 - [ ] Replace `/public/auris-logo.svg` placeholder with the real brand asset

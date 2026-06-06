@@ -9,6 +9,8 @@ import SignUp from './pages/SignUp.jsx';
 import AuthCallback from './pages/AuthCallback.jsx';
 import CompleteProfile from './pages/CompleteProfile.jsx';
 import Dashboard from './pages/Dashboard.jsx';
+import Upload from './pages/Upload.jsx';
+import JobDetail from './pages/JobDetail.jsx';
 
 export default function App() {
   return (
@@ -26,6 +28,8 @@ export default function App() {
         <Route element={<ProtectedRoute />}>
           <Route path="/complete-profile" element={<CompleteProfile />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/upload" element={<Upload />} />
+          <Route path="/jobs/:jobId" element={<JobDetail />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />
