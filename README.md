@@ -12,10 +12,9 @@ delivered back into the portal by a human operator.
 
 ## Status
 
-Milestone 3 — full schema (credit ledger, jobs, audit log), private storage
-buckets, RLS, realtime on jobs. The client dashboard with live credit
-balance + jobs table lands in Milestone 4. See `docs/SETUP.md` for the
-live operator checklist.
+Milestone 4 — client dashboard with live credit balance, "Upload a DPR" CTA,
+jobs table, and realtime status updates. Upload flow lands in Milestone 5.
+See `docs/SETUP.md` for the live operator checklist.
 
 ## Tech stack
 
