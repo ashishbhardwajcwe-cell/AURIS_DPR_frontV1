@@ -12,13 +12,11 @@ delivered back into the portal by a human operator.
 
 ## Status
 
-Milestone 9 — admin dashboard + client management. Four admin endpoints
-(`save-job`, `upload-deliverable-url`, `grant-credits`,
-`set-profile-status`) and three admin pages (`/admin/jobs`,
-`/admin/jobs/:id`, `/admin/clients`). The job page is the operator
-working surface: download client uploads, upload report + audio, set
-status, write a summary, and one-click "Save & notify client" — which
-deducts no extra credits, refunds on Failed, and emails on Completed.
+Milestone 10 — operational backbone. Four Netlify Scheduled Functions:
+nightly retention sweep (deletes files for closed jobs > 30 days old),
+nightly orphan reaper (cleans up abandoned uploads), monthly FIFO
+credit expiry (re-runnable, idempotent), and weekly low-balance email
+reminders. Every threshold is env-var-tunable.
 
 ## Tech stack
 
