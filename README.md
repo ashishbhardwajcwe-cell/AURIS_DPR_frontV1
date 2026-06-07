@@ -12,10 +12,11 @@ delivered back into the portal by a human operator.
 
 ## Status
 
-Milestone 7 — real job detail page with status timeline (Submitted → In Review
-→ Completed), inline `<audio>` player, "Download report (PDF)" button,
-operator summary, and live status flips via realtime. Resend notifications
-(Milestone 8) are next.
+Milestone 8 — Resend transactional emails. `confirm-upload` fires a
+"New DPR submitted" alert to the operator; `/api/notify-completed`
+sends a "Your report is ready" email to the client (admin-only,
+called from the M9 UI). Branded HTML + plain-text templates, XSS-safe,
+and silently no-op when the Resend env vars aren't configured.
 
 ## Tech stack
 

@@ -305,6 +305,71 @@ operator deliverables straight from SQL + the Supabase storage UI.
 - [ ] The page shows the failure note + "Your credit has been refunded"
 - [ ] Dashboard balance bumps back up via the realtime subscription
 
+## Milestone 8 — Resend transactional emails
+
+Two emails:
+
+| Trigger | From | To | Subject |
+| --- | --- | --- | --- |
+| `confirm-upload` fires after credit is deducted | `RESEND_FROM_EMAIL` (reply-to = client's email) | `OPERATOR_EMAIL` | `New DPR submitted — {project} ({company})` |
+| `/api/notify-completed` (called by the admin UI in M9) | `RESEND_FROM_EMAIL` | client's email | `Your DPR Analysis Report is ready — {project}` |
+
+Both templates render at `netlify/functions/_lib/templates.js` with
+inline-styled, table-based HTML for Outlook compatibility, plus a
+plain-text fallback.
+
+### Set up Resend
+
+- [ ] Sign up at <https://resend.com> and add your sending domain
+- [ ] Add the DNS records Resend shows you (SPF, DKIM) at your registrar
+- [ ] Wait for the domain status to flip to **Verified**
+- [ ] Generate an API key (Settings → API Keys → New)
+- [ ] In Netlify → Site settings → Environment variables, add:
+  - `RESEND_API_KEY`
+  - `RESEND_FROM_EMAIL` — must be on a verified domain, e.g. `noreply@dpranalyzer.com`
+  - `OPERATOR_EMAIL` — where new-upload alerts go (your inbox)
+  - `VITE_APP_URL` — production portal URL, used to build deep links in emails
+
+Without these env vars, the upload flow still works — both emails
+silently no-op and a single console log line is written
+(`[email] skipped — RESEND_API_KEY/RESEND_FROM_EMAIL not set…`). Wire
+them in whenever you're ready to receive notifications.
+
+### Optional: Make.com webhook
+
+- [ ] (Optional) Set `MAKE_WEBHOOK_URL` to forward submission events to
+      a Make.com scenario (e.g., copy the file into a Drive folder).
+      Payload: `{ event, jobId, userId, companyName, contactName, email,
+      projectName, roadStretch, fileCount, totalSizeBytes, uploadPaths,
+      adminUrl }`.
+
+### Smoke test
+
+- [ ] Submit a DPR from a client account → operator inbox receives the
+      "New DPR submitted" email; the CTA opens `/jobs/:id` (you'll see
+      the "Admin view" pill if you're signed in as admin)
+- [ ] In `audit_log` you should see two rows for the submission:
+      `dpr_submitted` (deduction) and `operator_notified` (email
+      outcome: `sent` true / `skipped` false)
+- [ ] To test the client email before M9 wires it into the admin UI,
+      from the browser console while signed in as **admin**:
+      ```js
+      const s = (await window.supabase.auth.getSession()).data.session;
+      await fetch('/api/notify-completed', {
+        method: 'POST',
+        headers: { 'content-type':'application/json', authorization:'Bearer '+s.access_token },
+        body: JSON.stringify({ jobId: <id> })
+      }).then(r => r.json()).then(console.log);
+      ```
+      (The job must already be in `status='completed'` — the function
+      refuses otherwise.) The client receives the report-ready email;
+      `audit_log` gets a `completion_notified` row.
+
+Preview the rendered HTML by saving any payload into
+`/tmp/preview.html` and opening it — `docs/email-previews/` is not
+checked in so the production templates can stay the single source of
+truth.
+
 ## Misc
 
 - [ ] Replace `/public/auris-logo.svg` placeholder with the real brand asset
