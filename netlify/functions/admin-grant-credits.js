@@ -4,9 +4,9 @@
 // policy on the ledger by design, so this is the only way credits change
 // hands outside the upload/refund flow.
 
-import { requireAdmin } from '../_lib/auth.js';
-import { errorResponse, httpError, json } from '../_lib/response.js';
-import { ValidationError } from '../_lib/validation.js';
+import { requireAdmin } from './_lib/auth.js';
+import { errorResponse, httpError, json } from './_lib/response.js';
+import { ValidationError } from './_lib/validation.js';
 
 // Mirror of the credit_ledger.reason CHECK constraint from §5 of the
 // schema. razorpay_purchase is here for Phase 2 — the admin will manually
