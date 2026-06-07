@@ -147,7 +147,7 @@ export default function Header() {
           aria-label="DPR Analyzer Pro home"
         >
           <img
-            src="/auris-logo.svg"
+            src="/auris-logo.png"
             alt="AURIS"
             style={logoStyle}
             onError={(e) => {
