@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { colors, fonts, radii, shadows, spacing } from '../styles/theme.js';
 
 const cardStyle = {
@@ -42,6 +43,15 @@ const helperStyle = {
   marginTop: spacing.sm,
 };
 
+const topUpStyle = {
+  display: 'inline-block',
+  marginTop: spacing.md,
+  fontFamily: fonts.body,
+  fontSize: '13.5px',
+  fontWeight: 600,
+  color: colors.tealDark,
+};
+
 export default function CreditBalanceCard({ balance, loading }) {
   return (
     <section style={cardStyle} aria-label="Credit balance">
@@ -54,6 +64,9 @@ export default function CreditBalanceCard({ balance, loading }) {
         Each DPR submission uses 1 credit. We&apos;ll email you when your
         balance gets low.
       </span>
+      <Link to="/pricing" style={topUpStyle}>
+        Top up credits →
+      </Link>
     </section>
   );
 }

@@ -12,6 +12,7 @@ import CompleteProfile from './pages/CompleteProfile.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import Upload from './pages/Upload.jsx';
 import JobDetail from './pages/JobDetail.jsx';
+import Pricing from './pages/Pricing.jsx';
 import AdminJobs from './pages/AdminJobs.jsx';
 import AdminJobDetail from './pages/AdminJobDetail.jsx';
 import AdminClients from './pages/AdminClients.jsx';
@@ -33,6 +34,7 @@ export default function App() {
           <Route path="/complete-profile" element={<CompleteProfile />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/upload" element={<Upload />} />
+          <Route path="/pricing" element={<Pricing />} />
           <Route path="/jobs/:jobId" element={<JobDetail />} />
         </Route>
 

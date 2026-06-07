@@ -313,6 +313,84 @@ export function lowBalanceTemplate({ profile, balance, severity, appUrl }) {
   return { subject, html, text };
 }
 
+// ---------------------------------------------------------------------
+// Client: payment receipt
+// ---------------------------------------------------------------------
+export function paymentReceiptTemplate({
+  profile,
+  pack,
+  amountInr,
+  paymentId,
+  newBalance,
+  appUrl,
+}) {
+  const subject = `Receipt — ${pack.credits} credit${pack.credits === 1 ? '' : 's'} added · DPR Analyzer Pro`;
+
+  const greeting = profile.contact_name
+    ? `Hi ${profile.contact_name},`
+    : 'Hello,';
+
+  const inrFormatted = new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0,
+  }).format(amountInr);
+
+  const detailsHtml = [
+    rowHtml('Pack', `${pack.label} (${pack.credits} credit${pack.credits === 1 ? '' : 's'})`),
+    rowHtml('Amount', inrFormatted),
+    rowHtml('Razorpay payment ID', paymentId || '—'),
+    typeof newBalance === 'number'
+      ? rowHtml('New balance', `${newBalance} credit${newBalance === 1 ? '' : 's'}`)
+      : '',
+  ]
+    .filter(Boolean)
+    .join('');
+
+  const bodyHtml = `
+    <p style="margin:0 0 14px 0;">${escapeHtml(greeting)}</p>
+    <p style="margin:0 0 14px 0;">
+      Thanks for topping up DPR Analyzer Pro. Your credits are available
+      immediately — you can start a new submission whenever you're ready.
+    </p>
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:8px 0 0 0;">
+      ${detailsHtml}
+    </table>
+  `;
+
+  const ctaUrl = appUrl
+    ? `${appUrl.replace(/\/$/, '')}/dashboard`
+    : null;
+
+  const html = brandedEmailHtml({
+    preheader: `Receipt for ${pack.credits} credits — ${inrFormatted}`,
+    heading: 'Receipt',
+    intro: null,
+    bodyHtml,
+    ctaLabel: ctaUrl ? 'Open dashboard' : null,
+    ctaUrl,
+    footnote:
+      'Keep this email for your records. GST invoices are issued from Razorpay\'s receipt page.',
+  });
+
+  const text = [
+    greeting,
+    '',
+    `Thanks for topping up DPR Analyzer Pro.`,
+    '',
+    `Pack: ${pack.label} (${pack.credits} credit${pack.credits === 1 ? '' : 's'})`,
+    `Amount: ${inrFormatted}`,
+    paymentId ? `Razorpay payment ID: ${paymentId}` : null,
+    typeof newBalance === 'number' ? `New balance: ${newBalance} credit${newBalance === 1 ? '' : 's'}` : null,
+    '',
+    ctaUrl ? `Open dashboard: ${ctaUrl}` : null,
+  ]
+    .filter((l) => l !== null)
+    .join('\n');
+
+  return { subject, html, text };
+}
+
 // Detail-row helper for the operator email's table.
 function rowHtml(label, value, multiline = false) {
   const valStyle = multiline
