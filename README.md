@@ -12,11 +12,11 @@ delivered back into the portal by a human operator.
 
 ## Status
 
-Milestone 8 — Resend transactional emails. `confirm-upload` fires a
-"New DPR submitted" alert to the operator; `/api/notify-completed`
-sends a "Your report is ready" email to the client (admin-only,
-called from the M9 UI). Branded HTML + plain-text templates, XSS-safe,
-and silently no-op when the Resend env vars aren't configured.
+Milestone 10 — operational backbone. Four Netlify Scheduled Functions:
+nightly retention sweep (deletes files for closed jobs > 30 days old),
+nightly orphan reaper (cleans up abandoned uploads), monthly FIFO
+credit expiry (re-runnable, idempotent), and weekly low-balance email
+reminders. Every threshold is env-var-tunable.
 
 ## Tech stack
 

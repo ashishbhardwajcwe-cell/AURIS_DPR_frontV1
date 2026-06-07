@@ -249,6 +249,70 @@ export function clientReportReadyTemplate({ profile, job, appUrl }) {
   return { subject, html, text };
 }
 
+// ---------------------------------------------------------------------
+// Client: low / out of credits reminder
+// ---------------------------------------------------------------------
+export function lowBalanceTemplate({ profile, balance, severity, appUrl }) {
+  // severity: 'low' (≤ threshold, > 0) or 'empty' (0 or less)
+  const isEmpty = severity === 'empty';
+  const subject = isEmpty
+    ? `You're out of DPR Analyzer Pro credits`
+    : `DPR Analyzer Pro — only ${balance} credit${balance === 1 ? '' : 's'} left`;
+
+  const greeting = profile.contact_name
+    ? `Hi ${profile.contact_name},`
+    : 'Hello,';
+
+  const headline = isEmpty
+    ? "You're out of credits"
+    : `You have ${balance} credit${balance === 1 ? '' : 's'} left`;
+
+  const bodyHtml = `
+    <p style="margin:0 0 14px 0;">${escapeHtml(greeting)}</p>
+    <p style="margin:0 0 14px 0;">
+      ${
+        isEmpty
+          ? 'Your DPR Analyzer Pro balance has run out, so you won&apos;t be able to start a new submission until we top it up.'
+          : `Your balance is running low — only <strong>${balance} credit${balance === 1 ? '' : 's'}</strong> left.`
+      }
+      Reply to this email or reach out to your AURIS account contact to top
+      up.
+    </p>
+  `;
+
+  const ctaUrl = appUrl
+    ? `${appUrl.replace(/\/$/, '')}/dashboard`
+    : null;
+
+  const html = brandedEmailHtml({
+    preheader: isEmpty
+      ? "Your credit balance has run out."
+      : `Your balance is down to ${balance}.`,
+    heading: headline,
+    intro: null,
+    bodyHtml,
+    ctaLabel: ctaUrl ? 'Open your dashboard' : null,
+    ctaUrl,
+    footnote:
+      'Each DPR submission uses one credit. Topping up is invoiced manually for now — Razorpay self-serve is on the roadmap.',
+  });
+
+  const text = [
+    greeting,
+    '',
+    isEmpty
+      ? 'Your DPR Analyzer Pro balance has run out.'
+      : `Your balance is running low — only ${balance} credit${balance === 1 ? '' : 's'} left.`,
+    '',
+    'Reply to this email or reach out to your AURIS account contact to top up.',
+    ctaUrl ? `\nOpen your dashboard: ${ctaUrl}` : null,
+  ]
+    .filter((l) => l !== null)
+    .join('\n');
+
+  return { subject, html, text };
+}
+
 // Detail-row helper for the operator email's table.
 function rowHtml(label, value, multiline = false) {
   const valStyle = multiline

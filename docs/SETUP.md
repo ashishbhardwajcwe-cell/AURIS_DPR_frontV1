@@ -370,6 +370,171 @@ Preview the rendered HTML by saving any payload into
 checked in so the production templates can stay the single source of
 truth.
 
+## Milestone 9 — admin dashboard + client management
+
+Promote yourself to admin once and the operator UI lights up:
+
+```sql
+update profiles set role='admin', status='active' where email='you@firm.com';
+```
+
+Sign back in; the header now shows an **Admin** chip. The sub-nav under
+the header gives you two tabs:
+
+### `/admin/jobs` — every DPR across every firm
+
+- Status-filter pills with live counts
+- Sort: newest first, max 200 rows
+- Realtime: any insert/update/delete refreshes the list
+- Click a row → admin job page
+
+### `/admin/jobs/:id` — operator working surface
+
+The control panel where you actually deliver an analysis:
+
+1. **Overview**: project + status + timeline + firm details + client's
+   note. A "View client-facing page" link opens the customer view at
+   `/jobs/:id` (with the "Admin view" pill we built in Milestone 7).
+2. **Client uploads**: each file as a row with a Download button that
+   mints a fresh signed URL via `/api/get-download-url` (admin only,
+   kind='upload').
+3. **Deliver** section:
+   - Choose a PDF → uploaded to
+     `dpr-reports/{user_id}/{job_id}/report-{safe}.pdf` via
+     `/api/admin/upload-deliverable-url` then a PUT to the signed URL
+   - Choose an MP3 → same flow with `audio-` prefix
+   - Summary textarea (max 4000 chars; surfaces on the client's job
+     page and inside the report-ready email)
+   - Status dropdown + "Email the client" checkbox (visible only when
+     status is "Completed")
+   - **Save** → one POST to `/api/admin/save-job` that updates the
+     job, stamps `completed_at`, issues a +1 refund if you flipped to
+     Failed (idempotent), and fires the client email when status
+     became Completed AND notify was checked. Returns flags so the UI
+     can confirm: "Saved. Credit refunded. Client notified."
+
+### `/admin/clients` — firm management
+
+- Table: company / contact / phone / email / status pill / **live
+  balance** / joined date
+- Header summary: total / active / pending / suspended counts
+- Approve a pending account → POST `/api/admin/set-profile-status`
+- Suspend an active account → same (you can't suspend yourself; the
+  server enforces this too)
+- **Grant** modal: amount (signed integer) + reason
+  (grant / razorpay_purchase / refund / expiry). Writes via
+  `/api/admin/grant-credits`. The `dpr_submission` reason is locked
+  out of this UI — that one is exclusive to the upload flow.
+
+### Smoke test
+
+- [ ] Promote yourself + activate as above
+- [ ] Open `/admin/jobs` — every existing test submission is listed
+- [ ] Open a job → set status to "In Review" + Save → the **client's**
+      `/jobs/:id` flips badge + timeline live (realtime)
+- [ ] Upload a dummy PDF + MP3, write a 2-line summary, set status to
+      Completed, leave "Email the client" checked, Save → client gets
+      the report-ready email; their dashboard balance is unchanged
+- [ ] Open `/admin/clients`, hit **Grant** on yourself, +20 credits,
+      reason `grant` → balance pill updates to +20
+- [ ] Suspend a test client → log in as that client → they see a
+      403 from `/api/request-upload` if they try to submit (the
+      pending banner will switch to "suspended" once we expose that
+      copy on the dashboard — minor polish item)
+
+## Milestone 10 — operational backbone (cron jobs)
+
+Four Netlify Scheduled Functions run on the schedules below. Nothing to
+deploy manually — once the branch is on Netlify, the scheduler picks
+them up automatically. All four no-op safely when Supabase env vars are
+missing (preview deploys without secrets), and the balance-reminder
+cron also no-ops when Resend isn't configured.
+
+| Function | Schedule (UTC) | What it does |
+| --- | --- | --- |
+| `cron-retention` | `0 2 * * *` (daily 02:00) | For jobs closed > `RETENTION_DAYS` (default 30) ago, removes objects from `dpr-uploads` + `dpr-reports` and clears the path columns. Keeps the job row + ledger + audit. |
+| `cron-orphan-reaper` | `30 2 * * *` (daily 02:30) | Deletes `submitted` jobs older than `ORPHAN_AGE_HOURS` (default 24) that have **no** `dpr_submission` ledger row — uploads the user abandoned before confirm-upload. Refuses to touch confirmed jobs. |
+| `cron-credit-expiry` | `0 3 1 * *` (1st of month 03:00) | For each profile, walks the ledger in FIFO order and inserts a single `expiry` row covering credits in lots older than `CREDIT_EXPIRY_MONTHS` (default 12) that haven't already been spent. Re-running the cron is a no-op (idempotent). |
+| `cron-balance-reminders` | `0 9 * * 1` (Mondays 09:00) | Active firms with `balance ≤ LOW_BALANCE_THRESHOLD` (default 3) get an email; `≤ 0` gets a sterner subject. Idempotent — won't re-send until the firm receives a positive ledger entry. |
+
+### Optional env vars (all have safe defaults)
+
+- `RETENTION_DAYS` — file retention window for closed jobs (default 30)
+- `ORPHAN_AGE_HOURS` — how long an unconfirmed submission lingers
+  before the reaper cleans it (default 24)
+- `CREDIT_EXPIRY_MONTHS` — credit lifetime (default 12)
+- `LOW_BALANCE_THRESHOLD` — when low-balance reminders start (default 3)
+
+### Manually invoke for testing
+
+With `netlify dev` running locally (or via `netlify functions:invoke`
+against a deployed site):
+
+```bash
+netlify functions:invoke cron-retention
+netlify functions:invoke cron-orphan-reaper
+netlify functions:invoke cron-credit-expiry
+netlify functions:invoke cron-balance-reminders
+```
+
+Each returns a one-line summary. Same payload lands in `audit_log` with
+`action='cron_…'`, so you can grep there too:
+
+```sql
+select created_at, action, metadata
+  from audit_log
+  where action like 'cron_%'
+  order by id desc
+  limit 20;
+```
+
+### Verify retention is working
+
+```sql
+-- Backdate a completed job's completed_at by 31 days to make it a
+-- retention candidate.
+update dpr_jobs
+   set completed_at = now() - interval '31 days'
+ where id = <some-completed-job-id>;
+```
+
+Run `netlify functions:invoke cron-retention`. The job's `upload_paths`,
+`report_path`, `audio_path` should all be NULL afterward, and the files
+should be gone from Storage. The job row itself is preserved.
+
+### Verify orphan reaper
+
+Open the Upload page, pick a file, but watch DevTools and abort the
+request-upload call so a job row is created without files actually
+uploading. (Or, more reliably: insert a fake submitted job via SQL with
+`submitted_at = now() - interval '2 days'` and no ledger row.) Run the
+cron — it disappears.
+
+### Verify credit expiry
+
+```sql
+-- Pretend a grant happened 13 months ago.
+insert into credit_ledger (user_id, delta, reason, created_at)
+  values (
+    (select id from profiles where email='client@firm.com'),
+    10,
+    'grant',
+    now() - interval '13 months'
+  );
+```
+
+Run `netlify functions:invoke cron-credit-expiry`. A new ledger row
+with `delta=-10, reason='expiry'` should appear. Run it a second time —
+nothing changes (idempotent).
+
+### Verify balance reminders
+
+Bring a test client to balance = 2 (well under the default threshold of
+3) via the admin Grant modal or SQL, then invoke
+`cron-balance-reminders`. The client receives the email; the audit log
+gets a `balance_reminder_sent` row with `severity='low'`. Invoking
+again is a no-op until they get a positive ledger row.
+
 ## Misc
 
 - [ ] Replace `/public/auris-logo.svg` placeholder with the real brand asset
