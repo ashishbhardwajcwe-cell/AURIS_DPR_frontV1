@@ -6,18 +6,20 @@
   functions = "netlify/functions"
 
 [build.environment]
-  NODE_VERSION = "20"
+  # Node 22 ships native WebSocket, which @supabase/realtime-js needs.
+  # On Node 20 the realtime client throws at createClient() construction
+  # time, breaking every function that touches Supabase.
+  NODE_VERSION = "22"
 
-# /api/* paths are claimed by the v2 functions via their `export const
-# config = { path: '/api/...' }` blocks. This redirect is belt-and-braces
-# in case any future function uses the legacy v1 invocation path.
-[[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/:splat"
-  status = 200
+# /api/* paths are claimed natively by the v2 functions via their
+# `export const config = { path: '/api/...' }` declarations. We
+# deliberately do NOT add a redirect here: a `/api/* → /.netlify/functions/:splat`
+# rewrite would break subdirectory functions (e.g. admin/grant-credits)
+# because Netlify deploys those by basename, not by relative path.
 
 # SPA fallback — every non-asset, non-API route should serve index.html
-# so React Router can take over on the client.
+# so React Router can take over on the client. Functions are matched
+# before this redirect runs, so /api/* never falls through to here.
 [[redirects]]
   from = "/*"
   to = "/index.html"
