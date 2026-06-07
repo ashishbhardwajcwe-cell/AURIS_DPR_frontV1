@@ -249,3 +249,88 @@ deployed site.
 `/api/cancel-upload` from the browser console or wait for the orphan
 reaper. The submission won't show up in the dashboard because we don't
 list `submitted` jobs without a ledger row.
+
+---
+
+## Razorpay self-serve credit purchases (Milestone 12)
+
+The `/pricing` page renders four credit packs (Starter / Small team /
+Standard / Large firm). Clients click **Buy** → Razorpay Checkout opens
+→ on success, the credit lands in their ledger automatically. The
+operator doesn't have to do anything manual.
+
+### Configure Razorpay
+
+1. Sign up at <https://razorpay.com> and complete KYC (required for
+   live payments; test mode works without)
+2. In **Razorpay dashboard → Account & Settings → API Keys** → Generate
+   Test/Live keys
+   - **Key Id** → `RAZORPAY_KEY_ID`
+   - **Key Secret** → `RAZORPAY_KEY_SECRET`
+3. Configure the webhook:
+   - **Webhooks → Add new webhook**
+   - URL: `https://<your-netlify-domain>/api/razorpay/webhook`
+   - Active events: **payment.captured**, **order.paid**
+   - Generate a webhook secret → `RAZORPAY_WEBHOOK_SECRET`
+4. Add all three values to Netlify → Site settings → Environment
+   variables and re-deploy
+
+### Adjust the pricing packs
+
+Pricing lives in two mirrored files (kept in sync intentionally to
+avoid a cross-tree import):
+
+- `netlify/functions/_lib/packs.js` — server (authoritative for amounts)
+- `src/lib/packs.js` — client (renders the cards)
+
+Edit both, redeploy, done. The pack id is the join key (e.g.,
+`standard`); Razorpay records it in the order notes.
+
+### Smoke test
+
+In Razorpay test mode, use the test card `4111 1111 1111 1111` with any
+future expiry + any CVV + the OTP `1234`. Then:
+
+- [ ] Sign in as an active client → `/pricing` → Buy the Standard pack
+      (10 credits, ₹11,500)
+- [ ] Razorpay Checkout opens → pay with the test card
+- [ ] Modal closes; the dashboard shows the updated balance
+- [ ] The client inbox has a receipt email subject
+      `Receipt — 10 credits added · DPR Analyzer Pro`
+- [ ] `credit_ledger` has a row `delta=+10, reason='razorpay_purchase'`
+- [ ] `audit_log` has both
+      `razorpay_order_created` and `razorpay_payment_applied` rows;
+      the latter has `source='client_verify'`
+- [ ] Repeat with the same payment id — webhook fires, sees the
+      `razorpay_payment_applied` row, returns `alreadyApplied: true`
+      without double-crediting
+
+### Verifying webhook signature locally
+
+`netlify dev` can simulate Razorpay webhooks if you forward them via a
+tunnel like ngrok. Easier: invoke the function directly with a
+hand-signed payload:
+
+```bash
+# Compute the signature for a sample event
+node -e "
+const c = require('node:crypto');
+const body = JSON.stringify({
+  event: 'payment.captured',
+  payload: {
+    payment: {
+      entity: {
+        id: 'pay_local_test',
+        order_id: 'order_local_test',
+        notes: { userId: 'YOUR-USER-UUID', packId: 'starter', credits: '1', priceInr: '1500' }
+      }
+    }
+  }
+});
+console.log('SIG:', c.createHmac('sha256','YOUR_WEBHOOK_SECRET').update(body).digest('hex'));
+console.log(body);
+"
+```
+
+Then POST that body to `/api/razorpay/webhook` with header
+`X-Razorpay-Signature: <SIG>`.

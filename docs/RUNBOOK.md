@@ -16,6 +16,7 @@ For first-time setup, see **[SETUP.md](SETUP.md)** instead.
 - [Accounts](#accounts)
 - [Storage](#storage)
 - [Email & notifications](#email--notifications)
+- [Payments (Razorpay)](#payments-razorpay)
 - [Cron jobs](#cron-jobs)
 - [Audit log queries](#audit-log-queries)
 - [Backup & data export](#backup--data-export)
@@ -318,6 +319,123 @@ dashboard if you need to back-fill.
 
 ---
 
+## Payments (Razorpay)
+
+### Find a specific payment
+
+```sql
+select created_at, user_id, action, metadata
+  from audit_log
+  where action in ('razorpay_order_created', 'razorpay_payment_applied')
+    and metadata->>'razorpayPaymentId' = 'pay_xxxxxxx'
+  order by id;
+```
+
+### Recent purchases
+
+```sql
+select a.created_at,
+       p.company_name,
+       a.metadata->>'packId' as pack,
+       (a.metadata->>'credits')::int as credits,
+       (a.metadata->>'priceInr')::int as price_inr,
+       a.metadata->>'source' as source
+  from audit_log a
+  left join profiles p on p.id = a.user_id
+  where a.action = 'razorpay_payment_applied'
+  order by a.id desc
+  limit 50;
+```
+
+### Detect a webhook-vs-client race
+
+Both source values land in the audit log; if the client verified
+first, `source='client_verify'` wins and the webhook becomes a no-op
+(`alreadyApplied: true`). If the webhook arrives first,
+`source='webhook'` wins. Either is fine — the idempotency anchor is the
+Razorpay payment id, not the source.
+
+```sql
+-- Payments that landed via the webhook (user closed the tab)
+select created_at, user_id, metadata->>'razorpayPaymentId' as payment_id
+  from audit_log
+  where action = 'razorpay_payment_applied'
+    and metadata->>'source' = 'webhook'
+  order by created_at desc
+  limit 50;
+```
+
+### A payment Razorpay marked successful but we never credited
+
+Cross-check Razorpay's dashboard against:
+
+```sql
+select a.metadata->>'razorpayOrderId' as order_id
+  from audit_log a
+  where a.action = 'razorpay_order_created'
+    and a.created_at > now() - interval '7 days'
+  except
+  select a.metadata->>'razorpayOrderId'
+    from audit_log a
+    where a.action = 'razorpay_payment_applied'
+      and a.created_at > now() - interval '7 days';
+```
+
+If an order id appears in the diff but Razorpay shows the payment as
+captured, the webhook never reached us (DNS, signing key, network).
+Replay the webhook from the Razorpay dashboard, or manually credit:
+
+```sql
+-- Look up the order's notes from Razorpay's dashboard to get the
+-- userId, packId, and credits, then:
+insert into credit_ledger (user_id, delta, reason)
+  values ('<userId>', <credits>, 'razorpay_purchase');
+
+insert into audit_log (user_id, action, metadata)
+  values (
+    '<userId>',
+    'razorpay_payment_applied',
+    jsonb_build_object(
+      'razorpayPaymentId', 'pay_xxx',
+      'razorpayOrderId',   'order_xxx',
+      'packId',            'standard',
+      'credits',            10,
+      'priceInr',           11500,
+      'source',             'manual_recovery',
+      'note',               'webhook never arrived; verified in Razorpay dashboard'
+    )
+  );
+```
+
+### Refund a Razorpay payment
+
+Two steps — they're independent and order doesn't matter:
+
+1. Refund the money in **Razorpay dashboard → Payments → the row →
+   Refund**. Razorpay sends the customer their own refund email.
+2. Take the credits back in our ledger:
+
+```sql
+insert into credit_ledger (user_id, delta, reason, dpr_job_id)
+  values ('<userId>', -<credits>, 'refund', null);
+```
+
+There's no special `reason` for "Razorpay reversal" — `refund` is the
+correct enum value (it's a credit-side reduction, regardless of cause).
+
+### Change pricing
+
+Edit BOTH files and redeploy:
+
+- `netlify/functions/_lib/packs.js`
+- `src/lib/packs.js`
+
+The pack id is the join key — never reuse an id for a different pack.
+If you need to retire a pack, leave it in the file with a comment so
+historical audit_log rows still resolve.
+
+---
+
 ## Cron jobs
 
 ### Manual invocation
@@ -544,6 +662,18 @@ Reactivate via `/admin/clients` or:
 ```sql
 update profiles set status='active' where email='client@firm.com';
 ```
+
+### "I paid for credits but they never arrived"
+
+1. Get the Razorpay payment id from the client (it's on Razorpay's
+   receipt email and on `/pricing` if they retry — Razorpay shows
+   recent payments)
+2. Run the [Find a specific payment](#find-a-specific-payment) query
+3. If `razorpay_payment_applied` is missing, run the
+   ["A payment Razorpay marked successful but we never credited"](#a-payment-razorpay-marked-successful-but-we-never-credited)
+   recovery
+4. If `razorpay_payment_applied` exists but the client's balance is
+   wrong, check the ledger directly — the row should be there
 
 ### "Storage costs are climbing"
 

@@ -280,8 +280,10 @@ export default function Upload() {
 
           {!isPending && !hasCredits && balance !== null && (
             <Alert variant="info" title="No credits available">
-              You don&apos;t have any credits yet. Please reach out to top up
-              before submitting.
+              You don&apos;t have any credits yet.{' '}
+              <Link to="/pricing" style={{ fontWeight: 600 }}>
+                Top up your credits →
+              </Link>
             </Alert>
           )}
 

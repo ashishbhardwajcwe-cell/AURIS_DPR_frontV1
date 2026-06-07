@@ -12,8 +12,8 @@ and is delivered back into the portal by a human operator.
 
 ## Status
 
-**Feature-complete (Milestones 1–10).** Razorpay self-serve credit
-purchases (Phase 2) are the only remaining brief item.
+**Complete (Milestones 1–12).** All build-order items from the brief
+are shipped, including Razorpay self-serve credit purchases (Phase 2).
 
 ## Quick start
 
@@ -72,7 +72,7 @@ up an audit trail), see **[docs/RUNBOOK.md](docs/RUNBOOK.md)**.
 | Resumable uploads | `tus-js-client` for files > 50 MB |
 | Transactional email | Resend |
 | Optional automation | Make.com webhook |
-| Future | Razorpay (Phase 2 — schema already supports it) |
+| Payments | Razorpay Checkout (INR) for self-serve credit packs |
 
 ## Project layout
 
@@ -152,6 +152,17 @@ Functions degrade gracefully without these (single log line, no email sent).
 | `RESEND_API_KEY` | server | Resend API key |
 | `RESEND_FROM_EMAIL` | server | Verified sender (e.g., `noreply@dpranalyzer.com`) |
 | `OPERATOR_EMAIL` | server | Inbox for "new DPR submitted" alerts |
+
+### Razorpay (Phase 2 — self-serve top-up)
+
+`/pricing` renders with no env vars set, but the Buy buttons return 503
+until you configure the three values below.
+
+| Variable | Scope | Purpose |
+| --- | --- | --- |
+| `RAZORPAY_KEY_ID` | server | Razorpay API key id (test or live) |
+| `RAZORPAY_KEY_SECRET` | server | Razorpay API key secret |
+| `RAZORPAY_WEBHOOK_SECRET` | server | Verifies the server-to-server webhook from Razorpay |
 
 ### Optional
 
