@@ -113,9 +113,22 @@ const userPillStyle = {
   textOverflow: 'ellipsis',
 };
 
+const adminLinkStyle = {
+  fontFamily: fonts.body,
+  fontSize: '12.5px',
+  fontWeight: 600,
+  letterSpacing: '0.06em',
+  textTransform: 'uppercase',
+  color: colors.tealPrimary,
+  border: '1px solid rgba(13,148,136,0.45)',
+  background: 'rgba(13,148,136,0.08)',
+  padding: '6px 12px',
+  borderRadius: radii.sm,
+};
+
 export default function Header() {
   const navigate = useNavigate();
-  const { isAuthenticated, isPending, profile, user, signOut } = useAuth();
+  const { isAuthenticated, isAdmin, isPending, profile, user, signOut } = useAuth();
 
   async function handleSignOut() {
     await signOut();
@@ -178,7 +191,12 @@ export default function Header() {
 
           {isAuthenticated && (
             <>
-              {isPending && (
+              {isAdmin && (
+                <NavLink to="/admin/jobs" style={adminLinkStyle}>
+                  Admin
+                </NavLink>
+              )}
+              {isPending && !isAdmin && (
                 <span style={pendingBadgeStyle} title="Awaiting operator approval">
                   Pending approval
                 </span>

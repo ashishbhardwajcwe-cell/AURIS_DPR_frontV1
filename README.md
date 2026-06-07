@@ -12,11 +12,13 @@ delivered back into the portal by a human operator.
 
 ## Status
 
-Milestone 8 — Resend transactional emails. `confirm-upload` fires a
-"New DPR submitted" alert to the operator; `/api/notify-completed`
-sends a "Your report is ready" email to the client (admin-only,
-called from the M9 UI). Branded HTML + plain-text templates, XSS-safe,
-and silently no-op when the Resend env vars aren't configured.
+Milestone 9 — admin dashboard + client management. Four admin endpoints
+(`save-job`, `upload-deliverable-url`, `grant-credits`,
+`set-profile-status`) and three admin pages (`/admin/jobs`,
+`/admin/jobs/:id`, `/admin/clients`). The job page is the operator
+working surface: download client uploads, upload report + audio, set
+status, write a summary, and one-click "Save & notify client" — which
+deducts no extra credits, refunds on Failed, and emails on Completed.
 
 ## Tech stack
 

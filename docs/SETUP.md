@@ -370,6 +370,78 @@ Preview the rendered HTML by saving any payload into
 checked in so the production templates can stay the single source of
 truth.
 
+## Milestone 9 — admin dashboard + client management
+
+Promote yourself to admin once and the operator UI lights up:
+
+```sql
+update profiles set role='admin', status='active' where email='you@firm.com';
+```
+
+Sign back in; the header now shows an **Admin** chip. The sub-nav under
+the header gives you two tabs:
+
+### `/admin/jobs` — every DPR across every firm
+
+- Status-filter pills with live counts
+- Sort: newest first, max 200 rows
+- Realtime: any insert/update/delete refreshes the list
+- Click a row → admin job page
+
+### `/admin/jobs/:id` — operator working surface
+
+The control panel where you actually deliver an analysis:
+
+1. **Overview**: project + status + timeline + firm details + client's
+   note. A "View client-facing page" link opens the customer view at
+   `/jobs/:id` (with the "Admin view" pill we built in Milestone 7).
+2. **Client uploads**: each file as a row with a Download button that
+   mints a fresh signed URL via `/api/get-download-url` (admin only,
+   kind='upload').
+3. **Deliver** section:
+   - Choose a PDF → uploaded to
+     `dpr-reports/{user_id}/{job_id}/report-{safe}.pdf` via
+     `/api/admin/upload-deliverable-url` then a PUT to the signed URL
+   - Choose an MP3 → same flow with `audio-` prefix
+   - Summary textarea (max 4000 chars; surfaces on the client's job
+     page and inside the report-ready email)
+   - Status dropdown + "Email the client" checkbox (visible only when
+     status is "Completed")
+   - **Save** → one POST to `/api/admin/save-job` that updates the
+     job, stamps `completed_at`, issues a +1 refund if you flipped to
+     Failed (idempotent), and fires the client email when status
+     became Completed AND notify was checked. Returns flags so the UI
+     can confirm: "Saved. Credit refunded. Client notified."
+
+### `/admin/clients` — firm management
+
+- Table: company / contact / phone / email / status pill / **live
+  balance** / joined date
+- Header summary: total / active / pending / suspended counts
+- Approve a pending account → POST `/api/admin/set-profile-status`
+- Suspend an active account → same (you can't suspend yourself; the
+  server enforces this too)
+- **Grant** modal: amount (signed integer) + reason
+  (grant / razorpay_purchase / refund / expiry). Writes via
+  `/api/admin/grant-credits`. The `dpr_submission` reason is locked
+  out of this UI — that one is exclusive to the upload flow.
+
+### Smoke test
+
+- [ ] Promote yourself + activate as above
+- [ ] Open `/admin/jobs` — every existing test submission is listed
+- [ ] Open a job → set status to "In Review" + Save → the **client's**
+      `/jobs/:id` flips badge + timeline live (realtime)
+- [ ] Upload a dummy PDF + MP3, write a 2-line summary, set status to
+      Completed, leave "Email the client" checked, Save → client gets
+      the report-ready email; their dashboard balance is unchanged
+- [ ] Open `/admin/clients`, hit **Grant** on yourself, +20 credits,
+      reason `grant` → balance pill updates to +20
+- [ ] Suspend a test client → log in as that client → they see a
+      403 from `/api/request-upload` if they try to submit (the
+      pending banner will switch to "suspended" once we expose that
+      copy on the dashboard — minor polish item)
+
 ## Misc
 
 - [ ] Replace `/public/auris-logo.svg` placeholder with the real brand asset
