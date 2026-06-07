@@ -12,11 +12,11 @@
 //     "report is ready" email via Resend (best-effort, never rolls
 //     back the status change)
 
-import { requireAdmin } from '../_lib/auth.js';
-import { errorResponse, httpError, json } from '../_lib/response.js';
-import { ValidationError } from '../_lib/validation.js';
-import { sendEmail } from '../_lib/email.js';
-import { clientReportReadyTemplate } from '../_lib/templates.js';
+import { requireAdmin } from './_lib/auth.js';
+import { errorResponse, httpError, json } from './_lib/response.js';
+import { ValidationError } from './_lib/validation.js';
+import { sendEmail } from './_lib/email.js';
+import { clientReportReadyTemplate } from './_lib/templates.js';
 
 const VALID_STATUSES = new Set([
   'submitted',

@@ -6,9 +6,9 @@
 // /api/admin/save-job once the upload has succeeded. Keeping the two
 // separate means a failed upload doesn't leave a stale path on the job.
 
-import { requireAdmin } from '../_lib/auth.js';
-import { errorResponse, httpError, json } from '../_lib/response.js';
-import { safeFilename, ValidationError } from '../_lib/validation.js';
+import { requireAdmin } from './_lib/auth.js';
+import { errorResponse, httpError, json } from './_lib/response.js';
+import { safeFilename, ValidationError } from './_lib/validation.js';
 
 const VALID_KINDS = new Set(['report', 'audio']);
 

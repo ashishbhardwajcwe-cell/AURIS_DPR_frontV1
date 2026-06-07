@@ -4,9 +4,9 @@
 // pending banner / suspended notice) and gates the upload flow on the
 // server (requireActiveClient rejects non-active statuses).
 
-import { requireAdmin } from '../_lib/auth.js';
-import { errorResponse, httpError, json } from '../_lib/response.js';
-import { ValidationError } from '../_lib/validation.js';
+import { requireAdmin } from './_lib/auth.js';
+import { errorResponse, httpError, json } from './_lib/response.js';
+import { ValidationError } from './_lib/validation.js';
 
 const VALID_STATUSES = new Set(['pending', 'active', 'suspended']);
 
