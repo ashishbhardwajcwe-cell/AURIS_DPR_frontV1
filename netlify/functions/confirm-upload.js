@@ -5,13 +5,14 @@
 //      already exists for this job — protects against double-fire)
 //   3. Stamps total_size_bytes on the job
 //   4. Writes an audit log row
-//
-// Milestone 8 will extend this to also send the operator notification email
-// via Resend and fire the optional Make.com webhook.
+//   5. Fires the operator notification email (Resend) + optional Make
+//      webhook — both best-effort, never roll back the deduction
 
 import { requireActiveClient } from './_lib/auth.js';
 import { errorResponse, httpError, json } from './_lib/response.js';
 import { ValidationError } from './_lib/validation.js';
+import { sendEmail, fireMakeWebhook } from './_lib/email.js';
+import { operatorNewUploadTemplate } from './_lib/templates.js';
 
 export default async (request) => {
   try {
@@ -36,12 +37,14 @@ export default async (request) => {
       throw new ValidationError('totalSizeBytes is required.');
     }
 
-    const { user, admin } = await requireActiveClient(request);
+    const { user, profile, admin } = await requireActiveClient(request);
 
     // Verify the job belongs to this user.
     const { data: job, error: jobErr } = await admin
       .from('dpr_jobs')
-      .select('id, user_id, status, upload_paths')
+      .select(
+        'id, user_id, status, upload_paths, project_name, road_stretch, notes'
+      )
       .eq('id', jobId)
       .maybeSingle();
     if (jobErr) throw httpError(500, 'Could not load job.');
@@ -83,15 +86,67 @@ export default async (request) => {
       .update({ total_size_bytes: totalSizeBytes })
       .eq('id', jobId);
 
+    const fileCount = Array.isArray(job.upload_paths)
+      ? job.upload_paths.length
+      : 0;
+
     await admin.from('audit_log').insert({
       user_id: user.id,
       action: 'dpr_submitted',
+      metadata: { jobId, totalSizeBytes, fileCount },
+    });
+
+    // ---- Notifications (best-effort) -------------------------------
+    // We deliberately await these so the audit_log entry for the email
+    // outcome lands in the same response. If either fails, the function
+    // still returns ok:true — the credit has already been deducted.
+    const operatorEmail = process.env.OPERATOR_EMAIL;
+    const appUrl = process.env.VITE_APP_URL || process.env.URL;
+
+    let emailResult = { skipped: true };
+    if (operatorEmail) {
+      const tmpl = operatorNewUploadTemplate({
+        profile,
+        job,
+        fileCount,
+        totalSizeBytes,
+        appUrl,
+      });
+      emailResult = await sendEmail({
+        to: operatorEmail,
+        subject: tmpl.subject,
+        html: tmpl.html,
+        text: tmpl.text,
+        replyTo: profile.email,
+      });
+    } else {
+      console.log('[confirm-upload] OPERATOR_EMAIL not set; skipping email');
+    }
+
+    const webhookResult = await fireMakeWebhook({
+      event: 'dpr_submitted',
+      jobId,
+      userId: user.id,
+      companyName: profile.company_name,
+      contactName: profile.contact_name,
+      email: profile.email,
+      projectName: job.project_name,
+      roadStretch: job.road_stretch,
+      fileCount,
+      totalSizeBytes,
+      uploadPaths: job.upload_paths,
+      adminUrl: appUrl ? `${appUrl.replace(/\/$/, '')}/jobs/${jobId}` : null,
+    });
+
+    // Best-effort secondary audit row — useful for "did the operator
+    // actually get the email?" debugging without scraping Resend logs.
+    await admin.from('audit_log').insert({
+      user_id: user.id,
+      action: 'operator_notified',
       metadata: {
         jobId,
-        totalSizeBytes,
-        fileCount: Array.isArray(job.upload_paths)
-          ? job.upload_paths.length
-          : null,
+        email: { sent: emailResult.ok, skipped: !!emailResult.skipped },
+        webhook: { sent: webhookResult.ok, skipped: !!webhookResult.skipped },
       },
     });
 
