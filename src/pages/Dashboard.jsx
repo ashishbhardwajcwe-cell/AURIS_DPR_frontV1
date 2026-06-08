@@ -195,7 +195,11 @@ export default function Dashboard() {
             title="You don't have any credits yet"
             style={{ marginBottom: spacing.lg }}
           >
-            Each DPR submission uses one credit.{' '}
+            Each DPR uses 3–10 credits depending on size — see the{' '}
+            <Link to="/pricing" style={{ fontWeight: 600 }}>
+              rate card
+            </Link>
+            .{' '}
             <Link to="/pricing" style={{ fontWeight: 600 }}>
               Top up your credits →
             </Link>

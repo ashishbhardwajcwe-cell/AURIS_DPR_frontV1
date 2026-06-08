@@ -50,6 +50,7 @@ export function saveJob({
   reportPath,
   audioPath,
   notify = false,
+  finalCredits,
 }) {
   return callApi('/api/admin/save-job', {
     jobId,
@@ -58,6 +59,7 @@ export function saveJob({
     reportPath,
     audioPath,
     notify,
+    finalCredits,
   });
 }
 

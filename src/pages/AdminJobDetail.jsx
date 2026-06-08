@@ -95,6 +95,7 @@ export default function AdminJobDetail() {
   const [reportPath, setReportPath] = useState(null);
   const [audioPath, setAudioPath] = useState(null);
   const [notify, setNotify] = useState(true);
+  const [finalCredits, setFinalCredits] = useState('');
 
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(null);
@@ -114,6 +115,9 @@ export default function AdminJobDetail() {
       setSummary(j.operator_summary || '');
       setReportPath(j.report_path || null);
       setAudioPath(j.audio_path || null);
+      setFinalCredits(
+        Number.isInteger(j.credits_used) ? String(j.credits_used) : '1'
+      );
       if (j.user_id) {
         const p = await getProfile(j.user_id);
         setOwner(p);
@@ -147,6 +151,7 @@ export default function AdminJobDetail() {
     try {
       const willNotify =
         typeof withNotify === 'boolean' ? withNotify : notify;
+      const finalCreditsNum = Number(finalCredits);
       const result = await saveJob({
         jobId: numericJobId,
         status,
@@ -154,9 +159,17 @@ export default function AdminJobDetail() {
         reportPath: reportPath || null,
         audioPath: audioPath || null,
         notify: status === 'completed' ? willNotify : false,
+        finalCredits: Number.isInteger(finalCreditsNum) && finalCreditsNum >= 1
+          ? finalCreditsNum
+          : undefined,
       });
       let flash = 'Saved.';
-      if (result.refunded) flash += ' Credit refunded.';
+      if (result.bandAdjustmentDelta > 0) {
+        flash += ` Refunded ${result.bandAdjustmentDelta} credit${result.bandAdjustmentDelta === 1 ? '' : 's'} (band adjustment).`;
+      } else if (result.bandAdjustmentDelta < 0) {
+        flash += ` Charged ${-result.bandAdjustmentDelta} additional credit${result.bandAdjustmentDelta === -1 ? '' : 's'} (band adjustment).`;
+      }
+      if (result.refunded) flash += ' Credits refunded for failed job.';
       if (result.notified) flash += ' Client notified.';
       setSavedFlash(flash);
       await load();
@@ -415,6 +428,31 @@ export default function AdminJobDetail() {
                 </select>
               </div>
 
+              <div>
+                <div style={labelStyle}>Final credit cost</div>
+                <input
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={finalCredits}
+                  onChange={(e) => setFinalCredits(e.target.value)}
+                  style={{ ...inputStyle, marginTop: 6 }}
+                  disabled={saving}
+                />
+                <div
+                  style={{
+                    fontFamily: fonts.body,
+                    fontSize: '12.5px',
+                    color: colors.textMuted,
+                    marginTop: 4,
+                  }}
+                >
+                  Client estimated: {job.credits_used ?? 1}
+                  {job.length_band ? ` (${job.length_band})` : ''}
+                  {job.has_structures ? ' + structures' : ''}
+                </div>
+              </div>
+
               {isCompletedStatus && (
                 <div>
                   <div style={labelStyle}>On save</div>
@@ -441,10 +479,35 @@ export default function AdminJobDetail() {
               )}
             </div>
 
+            {(() => {
+              const finalNum = Number(finalCredits);
+              const prior = Number.isInteger(job.credits_used) ? job.credits_used : 1;
+              if (!Number.isInteger(finalNum) || finalNum < 1) return null;
+              if (finalNum === prior) return null;
+              const diff = prior - finalNum;
+              return (
+                <Alert variant="warning">
+                  Saving will{' '}
+                  {diff > 0 ? (
+                    <>
+                      <strong>refund {diff} credit{diff === 1 ? '' : 's'}</strong> to the client
+                    </>
+                  ) : (
+                    <>
+                      <strong>charge {-diff} extra credit{-diff === -1 ? '' : 's'}</strong> from the client&apos;s balance
+                    </>
+                  )}{' '}
+                  (band adjustment).
+                </Alert>
+              );
+            })()}
+
             {status === 'failed' && job.status !== 'failed' && (
               <Alert variant="warning">
                 Marking this job as <strong>Failed</strong> will automatically
-                refund 1 credit to the client (idempotent — won&apos;t double-refund).
+                refund the {Number(finalCredits) || job.credits_used || 1} credit
+                {(Number(finalCredits) || job.credits_used || 1) === 1 ? '' : 's'}{' '}
+                charged for this job (idempotent — won&apos;t double-refund).
               </Alert>
             )}
 
