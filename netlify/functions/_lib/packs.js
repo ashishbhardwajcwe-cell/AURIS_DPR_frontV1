@@ -9,21 +9,21 @@ export const PACKS = Object.freeze({
     label: 'Starter',
     credits: 1,
     priceInr: 10000,
-    subtitle: 'One DPR submission',
+    subtitle: 'Single top-up credit',
   },
   small: {
     id: 'small',
     label: 'Small team',
     credits: 5,
     priceInr: 50000,
-    subtitle: '5 submissions · ₹10,000 each',
+    subtitle: '5 credits · ≈ 1 standard DPR',
   },
   standard: {
     id: 'standard',
     label: 'Standard',
     credits: 10,
     priceInr: 100000,
-    subtitle: '10 submissions · ₹10,000 each',
+    subtitle: '10 credits · ≈ 2–3 standard DPRs',
     highlight: true,
   },
   large: {
@@ -31,7 +31,7 @@ export const PACKS = Object.freeze({
     label: 'Large firm',
     credits: 25,
     priceInr: 250000,
-    subtitle: '25 submissions · ₹10,000 each',
+    subtitle: '25 credits · ≈ 6 standard DPRs',
   },
 });
 
