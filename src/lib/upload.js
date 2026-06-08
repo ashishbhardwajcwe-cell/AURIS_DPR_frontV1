@@ -45,12 +45,23 @@ async function callApi(path, body) {
   return resp.json();
 }
 
-export function requestUpload({ projectName, roadStretch, notes, files }) {
+export function requestUpload({
+  projectName,
+  roadStretch,
+  notes,
+  files,
+  lengthBand,
+  packages,
+  hasStructures,
+}) {
   return callApi('/api/request-upload', {
     projectName,
     roadStretch: roadStretch || null,
     notes: notes || null,
     files: files.map((f) => ({ name: f.name, sizeBytes: f.size })),
+    lengthBand,
+    packages,
+    hasStructures,
   });
 }
 
