@@ -15,6 +15,11 @@ import {
   uploadFile,
 } from '../lib/upload.js';
 import { formatBytes } from '../lib/format.js';
+import {
+  estimateCredits,
+  LENGTH_BANDS,
+  CREDIT_PRICE,
+} from '../lib/estimateCredits.js';
 import { colors, fonts, radii, shadows, spacing } from '../styles/theme.js';
 
 const PHASES = Object.freeze({
@@ -68,6 +73,49 @@ const summaryStyle = {
   gap: spacing.sm,
 };
 
+const estimateCardStyle = (low) => ({
+  marginTop: spacing.md,
+  padding: spacing.md,
+  background: low ? '#FEF2F2' : '#ECFDF5',
+  border: `1px solid ${low ? '#FCA5A5' : '#A7F3D0'}`,
+  borderRadius: radii.sm,
+  fontFamily: fonts.body,
+  fontSize: '14px',
+  color: colors.textPrimary,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 4,
+});
+
+const selectStyle = {
+  fontFamily: fonts.body,
+  fontSize: '14.5px',
+  padding: '11px 14px',
+  borderRadius: radii.sm,
+  border: `1px solid ${colors.cardBorder}`,
+  background: '#FFFFFF',
+  color: colors.textPrimary,
+  width: '100%',
+  outline: 'none',
+};
+
+const fieldLabelStyle = {
+  fontFamily: fonts.body,
+  fontSize: '13.5px',
+  fontWeight: 500,
+  color: colors.textPrimary,
+  display: 'block',
+  marginBottom: '6px',
+};
+
+function formatRupees(amount) {
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
 const linkStyle = {
   fontFamily: fonts.body,
   fontSize: '14px',
@@ -83,6 +131,9 @@ export default function Upload() {
   const [roadStretch, setRoadStretch] = useState('');
   const [notes, setNotes] = useState('');
   const [files, setFiles] = useState([]);
+  const [lengthBand, setLengthBand] = useState('standard');
+  const [packages, setPackages] = useState(1);
+  const [hasStructures, setHasStructures] = useState(false);
 
   const [phase, setPhase] = useState(PHASES.IDLE);
   const [errorText, setErrorText] = useState(null);
@@ -106,13 +157,23 @@ export default function Upload() {
 
   const issues = describeFileIssues(files);
   const isActive = profile?.status === 'active';
-  const hasCredits = (balance ?? 0) > 0;
+  const estimate = useMemo(
+    () =>
+      estimateCredits({
+        lengthBand,
+        packages: Number(packages) || 1,
+        hasStructures,
+      }),
+    [lengthBand, packages, hasStructures]
+  );
+  const balanceKnown = balance !== null;
+  const hasEnoughCredits = balanceKnown && balance >= estimate;
   const submitDisabled =
     !projectName.trim() ||
     files.length === 0 ||
     issues.length > 0 ||
     !isActive ||
-    !hasCredits ||
+    !hasEnoughCredits ||
     phase === PHASES.STARTING ||
     phase === PHASES.UPLOADING ||
     phase === PHASES.CONFIRMING;
@@ -177,6 +238,9 @@ export default function Upload() {
         roadStretch: roadStretch.trim(),
         notes: notes.trim(),
         files,
+        lengthBand,
+        packages: Number(packages) || 1,
+        hasStructures,
       });
       setJobId(newJobId);
 
@@ -268,8 +332,12 @@ export default function Upload() {
         <div style={cardStyle}>
           <h1 style={titleStyle}>Upload a DPR</h1>
           <p style={subStyle}>
-            Submit a Detailed Project Report for compliance analysis. Each
-            submission uses 1 credit.
+            Submit a Detailed Project Report for compliance analysis. Credit
+            cost depends on size and complexity — see the{' '}
+            <Link to="/pricing" style={linkStyle}>
+              rate card
+            </Link>
+            .
           </p>
 
           {isPending && (
@@ -278,9 +346,10 @@ export default function Upload() {
             </Alert>
           )}
 
-          {!isPending && !hasCredits && balance !== null && (
-            <Alert variant="info" title="No credits available">
-              You don&apos;t have any credits yet.{' '}
+          {!isPending && balanceKnown && balance < estimate && (
+            <Alert variant="info" title="Not enough credits">
+              You have {balance} credit{balance === 1 ? '' : 's'} but this
+              submission needs {estimate}.{' '}
               <Link to="/pricing" style={{ fontWeight: 600 }}>
                 Top up your credits →
               </Link>
@@ -339,6 +408,71 @@ export default function Upload() {
                 placeholder="Anything specific you want us to look at"
               />
 
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                  gap: spacing.md,
+                  marginTop: spacing.md,
+                }}
+              >
+                <div>
+                  <label htmlFor="up-band" style={fieldLabelStyle}>
+                    Road length <span style={{ color: colors.statusFailed }}>*</span>
+                  </label>
+                  <select
+                    id="up-band"
+                    value={lengthBand}
+                    onChange={(e) => setLengthBand(e.target.value)}
+                    disabled={submitting}
+                    style={selectStyle}
+                  >
+                    {LENGTH_BANDS.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="up-packages" style={fieldLabelStyle}>
+                    Number of packages
+                  </label>
+                  <input
+                    id="up-packages"
+                    type="number"
+                    min={1}
+                    step={1}
+                    value={packages}
+                    onChange={(e) => setPackages(e.target.value)}
+                    disabled={submitting}
+                    style={selectStyle}
+                  />
+                </div>
+                <div>
+                  <label style={fieldLabelStyle}>Structural design</label>
+                  <label
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      padding: '11px 0',
+                      fontFamily: fonts.body,
+                      fontSize: '14px',
+                      color: colors.textPrimary,
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={hasStructures}
+                      onChange={(e) => setHasStructures(e.target.checked)}
+                      disabled={submitting}
+                    />
+                    Contains major bridge(s)
+                  </label>
+                </div>
+              </div>
+
               <div style={{ margin: `${spacing.md} 0` }}>
                 <label
                   htmlFor="dropzone"
@@ -366,12 +500,27 @@ export default function Upload() {
                     {files.length} file{files.length === 1 ? '' : 's'} ·{' '}
                     {formatBytes(totalSize)} total
                   </span>
-                  <span>
-                    This will use <strong>1 credit</strong> · {balance ?? '—'}{' '}
-                    available
-                  </span>
                 </div>
               )}
+
+              <div style={estimateCardStyle(balanceKnown && balance < estimate)}>
+                <span>
+                  Estimated cost:{' '}
+                  <strong>
+                    {estimate} credit{estimate === 1 ? '' : 's'} (
+                    {formatRupees(estimate * CREDIT_PRICE)})
+                  </strong>
+                  {' · '}
+                  Your balance:{' '}
+                  <strong>
+                    {balanceKnown ? `${balance} credit${balance === 1 ? '' : 's'}` : '—'}
+                  </strong>
+                </span>
+                <span style={{ fontSize: 12.5, color: colors.textMuted }}>
+                  Final credit cost is confirmed by the operator when the
+                  file is reviewed.
+                </span>
+              </div>
 
               {issues.length > 0 && (
                 <Alert variant="error" style={{ marginTop: spacing.md }}>
