@@ -61,7 +61,7 @@ export default function CreditBalanceCard({ balance, loading }) {
       </span>
       <span style={labelStyle}>available for DPR submissions</span>
       <span style={helperStyle}>
-        Each DPR submission uses 1 credit. We&apos;ll email you when your
+        DPRs draw 3–10 credits by size. We&apos;ll email you when your
         balance gets low.
       </span>
       <Link to="/pricing" style={topUpStyle}>
