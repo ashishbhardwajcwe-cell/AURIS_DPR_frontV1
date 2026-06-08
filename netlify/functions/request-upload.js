@@ -19,6 +19,7 @@ import {
   validateFiles,
   ValidationError,
 } from './_lib/validation.js';
+import { estimateCredits, isValidBand } from './_lib/estimateCredits.js';
 
 export default async (request) => {
   try {
@@ -40,14 +41,32 @@ export default async (request) => {
     const notes = body.notes ? String(body.notes).trim() : null;
     const files = Array.isArray(body.files) ? body.files : [];
 
+    const lengthBand = body.lengthBand ? String(body.lengthBand) : 'standard';
+    const packagesRaw = Number(body.packages);
+    const packages = Number.isFinite(packagesRaw) && packagesRaw >= 1
+      ? Math.floor(packagesRaw)
+      : 1;
+    const hasStructures = Boolean(body.hasStructures);
+
     if (!projectName) {
       throw new ValidationError('Project name is required.');
     }
     if (projectName.length > 200) {
       throw new ValidationError('Project name is too long (max 200 chars).');
     }
+    if (!isValidBand(lengthBand)) {
+      throw new ValidationError('Invalid road length band.');
+    }
 
     validateFiles(files);
+
+    // Server-side estimate is authoritative — never trust whatever the
+    // client computed. Same helper, same inputs, same answer.
+    const estimatedCredits = estimateCredits({
+      lengthBand,
+      packages,
+      hasStructures,
+    });
 
     const { user, admin } = await requireActiveClient(request);
 
@@ -59,9 +78,9 @@ export default async (request) => {
       { uid: user.id }
     );
     if (balErr) throw httpError(500, 'Could not read credit balance.');
-    if ((balance ?? 0) < 1) {
+    if ((balance ?? 0) < estimatedCredits) {
       throw new ValidationError(
-        "You don't have enough credits for this submission."
+        `You don't have enough credits for this submission. Needs ${estimatedCredits}, have ${balance ?? 0}.`
       );
     }
 
@@ -75,7 +94,10 @@ export default async (request) => {
         road_stretch: roadStretch,
         notes,
         status: 'submitted',
-        credits_used: 1,
+        credits_used: estimatedCredits,
+        length_band: lengthBand,
+        packages,
+        has_structures: hasStructures,
       })
       .select('id')
       .single();
