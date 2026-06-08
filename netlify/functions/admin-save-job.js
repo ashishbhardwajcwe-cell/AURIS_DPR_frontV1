@@ -116,9 +116,12 @@ export default async (request) => {
     }
 
     if (willRefund) {
+      const refundAmount = Number.isInteger(existing.credits_used) && existing.credits_used > 0
+        ? existing.credits_used
+        : 1;
       await admin.from('credit_ledger').insert({
         user_id: existing.user_id,
-        delta: 1,
+        delta: refundAmount,
         reason: 'refund',
         dpr_job_id: jobId,
       });

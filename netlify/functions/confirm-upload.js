@@ -43,7 +43,7 @@ export default async (request) => {
     const { data: job, error: jobErr } = await admin
       .from('dpr_jobs')
       .select(
-        'id, user_id, status, upload_paths, project_name, road_stretch, notes'
+        'id, user_id, status, upload_paths, project_name, road_stretch, notes, credits_used'
       )
       .eq('id', jobId)
       .maybeSingle();
@@ -71,9 +71,12 @@ export default async (request) => {
     // Postgres doesn't give us a single transaction here, but the ledger
     // INSERT is the only step that materially affects the user; if any of
     // the others fails we still want the deduction to stand.
+    const creditsToDeduct = Number.isInteger(job.credits_used) && job.credits_used > 0
+      ? job.credits_used
+      : 1;
     const { error: ledgerErr } = await admin.from('credit_ledger').insert({
       user_id: user.id,
-      delta: -1,
+      delta: -creditsToDeduct,
       reason: 'dpr_submission',
       dpr_job_id: jobId,
     });
