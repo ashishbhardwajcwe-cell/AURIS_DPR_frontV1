@@ -16,6 +16,7 @@ const VALID_REASONS = new Set([
   'refund',
   'expiry',
   'razorpay_purchase',
+  'band_adjustment',
 ]);
 
 export default async (request) => {

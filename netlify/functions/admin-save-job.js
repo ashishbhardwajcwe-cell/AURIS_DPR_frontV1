@@ -77,6 +77,23 @@ export default async (request) => {
       updates.audio_path = body.audioPath || null;
     }
 
+    let bandAdjustmentDelta = 0;
+    if (body.finalCredits !== undefined && body.finalCredits !== null) {
+      const finalCredits = Number(body.finalCredits);
+      if (!Number.isInteger(finalCredits) || finalCredits < 1) {
+        throw new ValidationError('finalCredits must be a positive integer.');
+      }
+      const previousCredits = Number.isInteger(existing.credits_used)
+        ? existing.credits_used
+        : 1;
+      if (finalCredits !== previousCredits) {
+        // delta = previous - final → positive means client gets credits
+        // back, negative means client owes more.
+        bandAdjustmentDelta = previousCredits - finalCredits;
+        updates.credits_used = finalCredits;
+      }
+    }
+
     let willRefund = false;
     let willNotify = false;
     let statusChanged = false;
@@ -115,10 +132,24 @@ export default async (request) => {
       if (updErr) throw httpError(500, 'Could not update job.');
     }
 
+    if (bandAdjustmentDelta !== 0) {
+      const { error: adjErr } = await admin.from('credit_ledger').insert({
+        user_id: existing.user_id,
+        delta: bandAdjustmentDelta,
+        reason: 'band_adjustment',
+        dpr_job_id: jobId,
+      });
+      if (adjErr) throw httpError(500, 'Could not write band-adjustment ledger row.');
+    }
+
     if (willRefund) {
-      const refundAmount = Number.isInteger(existing.credits_used) && existing.credits_used > 0
-        ? existing.credits_used
-        : 1;
+      // Refund the final charged amount (which reflects any band
+      // adjustment we just wrote above).
+      const refundAmount = Number.isInteger(updates.credits_used)
+        ? updates.credits_used
+        : Number.isInteger(existing.credits_used) && existing.credits_used > 0
+          ? existing.credits_used
+          : 1;
       await admin.from('credit_ledger').insert({
         user_id: existing.user_id,
         delta: refundAmount,
@@ -136,6 +167,7 @@ export default async (request) => {
         priorStatus: existing.status,
         updates,
         refunded: willRefund,
+        bandAdjustmentDelta,
         willNotify,
       },
     });
@@ -179,6 +211,7 @@ export default async (request) => {
       ok: true,
       statusChanged,
       refunded: willRefund,
+      bandAdjustmentDelta,
       notified: willNotify,
       emailResult,
     });
