@@ -26,9 +26,9 @@ const eyebrowStyle = {
   fontFamily: fonts.body,
   fontSize: '13px',
   fontWeight: 600,
-  letterSpacing: '0.18em',
+  letterSpacing: '0.22em',
   textTransform: 'uppercase',
-  color: colors.tealPrimary,
+  color: colors.gold,
 };
 
 const headlineStyle = {
@@ -54,7 +54,7 @@ const ctaRowStyle = {
 };
 
 const primaryCta = {
-  background: colors.tealPrimary,
+  background: gradients.cta,
   color: colors.textOnDark,
   fontFamily: fonts.body,
   fontWeight: 600,
@@ -63,6 +63,8 @@ const primaryCta = {
   borderRadius: radii.md,
   border: 'none',
   display: 'inline-block',
+  boxShadow: shadows.cta,
+  transition: 'transform 120ms ease, box-shadow 140ms ease',
 };
 
 const secondaryCta = {
@@ -101,7 +103,18 @@ const cardStyle = {
   borderRadius: radii.lg,
   boxShadow: shadows.card,
   padding: spacing.lg,
+  transition: 'transform 160ms ease, box-shadow 160ms ease',
 };
+
+function liftCard(e) {
+  e.currentTarget.style.transform = 'translateY(-3px)';
+  e.currentTarget.style.boxShadow = shadows.cardHover;
+}
+
+function restCard(e) {
+  e.currentTarget.style.transform = 'translateY(0)';
+  e.currentTarget.style.boxShadow = shadows.card;
+}
 
 const cardTitle = {
   fontFamily: fonts.heading,
@@ -148,7 +161,7 @@ export default function Landing() {
         <div className="container">
           <h2 style={sectionHeading}>What you receive</h2>
           <div style={featureGrid}>
-            <article style={cardStyle}>
+            <article style={cardStyle} onMouseEnter={liftCard} onMouseLeave={restCard}>
               <h3 style={cardTitle}>Structured compliance report</h3>
               <p style={cardBody}>
                 A clearly written PDF mapping your DPR against the relevant IRC
@@ -156,14 +169,14 @@ export default function Landing() {
                 observations section by section.
               </p>
             </article>
-            <article style={cardStyle}>
+            <article style={cardStyle} onMouseEnter={liftCard} onMouseLeave={restCard}>
               <h3 style={cardTitle}>Audio overview</h3>
               <p style={cardBody}>
                 A short, podcast-style audio walkthrough so you can absorb the
                 key findings on the move before reading the full report.
               </p>
             </article>
-            <article style={cardStyle}>
+            <article style={cardStyle} onMouseEnter={liftCard} onMouseLeave={restCard}>
               <h3 style={cardTitle}>Confidential by design</h3>
               <p style={cardBody}>
                 Files stay in private, encrypted storage in the Mumbai region.

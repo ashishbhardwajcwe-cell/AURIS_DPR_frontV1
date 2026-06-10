@@ -1,11 +1,20 @@
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/auth.jsx';
-import { colors, gradients, fonts, layout, radii, spacing } from '../styles/theme.js';
+import {
+  colors,
+  gradients,
+  fonts,
+  layout,
+  radii,
+  shadows,
+  spacing,
+} from '../styles/theme.js';
 
 const headerStyle = {
   background: gradients.hero,
   color: colors.textOnDark,
-  borderBottom: `1px solid ${colors.navy700}`,
+  borderBottom: '1px solid rgba(200, 162, 75, 0.22)',
+  boxShadow: shadows.header,
   position: 'sticky',
   top: 0,
   zIndex: 100,
@@ -31,6 +40,7 @@ const logoStyle = {
   height: 40,
   borderRadius: '8px',
   flexShrink: 0,
+  boxShadow: '0 0 0 1px rgba(200, 162, 75, 0.35), 0 2px 8px rgba(0, 0, 0, 0.3)',
 };
 
 const wordmarkStyle = {
@@ -50,6 +60,7 @@ const taglineStyle = {
   fontFamily: fonts.body,
   fontSize: '11.5px',
   fontWeight: 400,
+  letterSpacing: '0.04em',
   color: colors.textOnDarkMuted,
   marginTop: 2,
 };
@@ -72,10 +83,11 @@ const linkBase = {
 
 const ctaButtonStyle = {
   ...linkBase,
-  background: colors.tealPrimary,
+  background: gradients.cta,
   color: colors.textOnDark,
   padding: '9px 18px',
   fontWeight: 600,
+  boxShadow: shadows.cta,
 };
 
 const ghostButtonStyle = {

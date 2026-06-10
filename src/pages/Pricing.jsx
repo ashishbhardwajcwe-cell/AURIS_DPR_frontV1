@@ -72,10 +72,11 @@ const ribbonStyle = {
   fontWeight: 600,
   letterSpacing: '0.1em',
   textTransform: 'uppercase',
-  color: colors.textOnDark,
-  background: colors.tealPrimary,
+  color: colors.navy900,
+  background: `linear-gradient(180deg, #DDBC6B 0%, ${colors.gold} 100%)`,
   padding: '4px 10px',
   borderRadius: radii.pill,
+  boxShadow: '0 2px 8px rgba(200, 162, 75, 0.4)',
 };
 
 const labelStyle = {
