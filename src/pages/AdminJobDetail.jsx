@@ -169,7 +169,9 @@ export default function AdminJobDetail() {
       } else if (result.bandAdjustmentDelta < 0) {
         flash += ` Charged ${-result.bandAdjustmentDelta} additional credit${result.bandAdjustmentDelta === -1 ? '' : 's'} (band adjustment).`;
       }
-      if (result.refunded) flash += ' Credits refunded for failed job.';
+      if (result.refunded) {
+        flash += ` Refunded ${result.refundedCredits || ''} credit${result.refundedCredits === 1 ? '' : 's'} for failed job.`;
+      }
       if (result.notified) flash += ' Client notified.';
       setSavedFlash(flash);
       await load();
