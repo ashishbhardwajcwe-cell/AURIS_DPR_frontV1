@@ -1,11 +1,12 @@
 // /api/confirm-upload
 // Called by the browser after every file is successfully in storage.
 //   1. Authenticates the user (Bearer JWT) and confirms they own the job
-//   2. Idempotently deducts 1 credit (skip if a 'dpr_submission' ledger row
-//      already exists for this job — protects against double-fire)
-//   3. Stamps total_size_bytes on the job
-//   4. Writes an audit log row
-//   5. Fires the operator notification email (Resend) + optional Make
+//   2. Calls the confirm_dpr_submission RPC, which atomically (in one
+//      transaction, under a per-user advisory lock): re-checks the
+//      idempotency guard, re-checks the balance, deducts credits_used,
+//      and stamps total_size_bytes on the job
+//   3. Writes an audit log row
+//   4. Fires the operator notification email (Resend) + optional Make
 //      webhook — both best-effort, never roll back the deduction
 
 import { requireActiveClient } from './_lib/auth.js';
@@ -53,41 +54,32 @@ export default async (request) => {
       throw httpError(403, 'You do not own this job.');
     }
 
-    // Idempotency: if a credit deduction already exists for this job,
-    // treat it as already confirmed.
-    const { data: existing, error: existsErr } = await admin
-      .from('credit_ledger')
-      .select('id')
-      .eq('dpr_job_id', jobId)
-      .eq('reason', 'dpr_submission')
-      .maybeSingle();
-    if (existsErr) throw httpError(500, 'Could not read ledger.');
+    // Atomic deduction via the confirm_dpr_submission RPC: idempotency
+    // check, balance re-check, ledger insert, and total_size stamp all run
+    // in one transaction under a per-user advisory lock, so two concurrent
+    // submissions can't both pass the balance check.
+    const { data: result, error: rpcErr } = await admin.rpc(
+      'confirm_dpr_submission',
+      {
+        p_user_id: user.id,
+        p_job_id: jobId,
+        p_total_size_bytes: totalSizeBytes,
+      }
+    );
+    if (rpcErr) throw httpError(500, 'Could not deduct credit.');
 
-    if (existing) {
+    if (result?.status === 'already_confirmed') {
       return json({ ok: true, alreadyConfirmed: true });
     }
-
-    // Atomic-ish sequence: ledger row, then job update, then audit log.
-    // Postgres doesn't give us a single transaction here, but the ledger
-    // INSERT is the only step that materially affects the user; if any of
-    // the others fails we still want the deduction to stand.
-    const creditsToDeduct = Number.isInteger(job.credits_used) && job.credits_used > 0
-      ? job.credits_used
-      : 1;
-    const { error: ledgerErr } = await admin.from('credit_ledger').insert({
-      user_id: user.id,
-      delta: -creditsToDeduct,
-      reason: 'dpr_submission',
-      dpr_job_id: jobId,
-    });
-    if (ledgerErr) {
-      throw httpError(500, 'Could not deduct credit.');
+    if (result?.status === 'insufficient_credits') {
+      throw new ValidationError(
+        `You no longer have enough credits for this submission. Needs ${result.required}, have ${result.balance}. Please top up and try again.`
+      );
     }
-
-    await admin
-      .from('dpr_jobs')
-      .update({ total_size_bytes: totalSizeBytes })
-      .eq('id', jobId);
+    if (result?.status !== 'ok') {
+      throw httpError(500, 'Could not confirm the submission.');
+    }
+    const creditsToDeduct = result.credits_deducted;
 
     const fileCount = Array.isArray(job.upload_paths)
       ? job.upload_paths.length
@@ -96,7 +88,7 @@ export default async (request) => {
     await admin.from('audit_log').insert({
       user_id: user.id,
       action: 'dpr_submitted',
-      metadata: { jobId, totalSizeBytes, fileCount },
+      metadata: { jobId, totalSizeBytes, fileCount, creditsDeducted: creditsToDeduct },
     });
 
     // ---- Notifications (best-effort) -------------------------------

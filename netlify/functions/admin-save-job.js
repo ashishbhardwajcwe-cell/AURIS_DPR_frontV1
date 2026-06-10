@@ -5,9 +5,11 @@
 //
 // Side effects baked in (so the admin UI can't forget):
 //   - Status flip → 'completed' or 'failed' stamps completed_at
-//   - Status flip → 'failed' (from anything else) inserts a +1 refund
-//     into credit_ledger (idempotent — skipped if a refund row already
-//     exists for this job)
+//   - finalCredits ≠ credits_used → the admin_set_job_credits RPC writes
+//     a signed band_adjustment ledger row and updates credits_used in
+//     one transaction
+//   - Status flip → 'failed' (from anything else) refunds the charged
+//     credits via the admin_refund_job RPC (atomic + idempotent)
 //   - Status flip → 'completed' AND notify=true sends the client
 //     "report is ready" email via Resend (best-effort, never rolls
 //     back the status change)
@@ -77,20 +79,11 @@ export default async (request) => {
       updates.audio_path = body.audioPath || null;
     }
 
-    let bandAdjustmentDelta = 0;
+    let finalCredits = null;
     if (body.finalCredits !== undefined && body.finalCredits !== null) {
-      const finalCredits = Number(body.finalCredits);
+      finalCredits = Number(body.finalCredits);
       if (!Number.isInteger(finalCredits) || finalCredits < 1) {
         throw new ValidationError('finalCredits must be a positive integer.');
-      }
-      const previousCredits = Number.isInteger(existing.credits_used)
-        ? existing.credits_used
-        : 1;
-      if (finalCredits !== previousCredits) {
-        // delta = previous - final → positive means client gets credits
-        // back, negative means client owes more.
-        bandAdjustmentDelta = previousCredits - finalCredits;
-        updates.credits_used = finalCredits;
       }
     }
 
@@ -110,18 +103,30 @@ export default async (request) => {
           updates.completed_at = new Date().toISOString();
         }
         if (nextStatus === 'failed' && existing.status !== 'failed') {
-          const { data: existingRefund } = await admin
-            .from('credit_ledger')
-            .select('id')
-            .eq('dpr_job_id', jobId)
-            .eq('reason', 'refund')
-            .maybeSingle();
-          if (!existingRefund) willRefund = true;
+          willRefund = true;
         }
         if (nextStatus === 'completed' && Boolean(body.notify)) {
           willNotify = true;
         }
       }
+    }
+
+    // Band adjustment first, so a subsequent refund (the RPC reads the
+    // job's credits_used itself) refunds the corrected amount. The RPC
+    // writes the ledger row and updates credits_used in one transaction.
+    let bandAdjustmentDelta = 0;
+    if (finalCredits !== null) {
+      const { data: adjResult, error: adjErr } = await admin.rpc(
+        'admin_set_job_credits',
+        { p_job_id: jobId, p_final_credits: finalCredits }
+      );
+      if (adjErr || adjResult?.status === 'invalid') {
+        throw httpError(500, 'Could not apply the band adjustment.');
+      }
+      if (adjResult?.status === 'not_found') {
+        throw httpError(404, 'Job not found.');
+      }
+      bandAdjustmentDelta = adjResult?.delta ?? 0;
     }
 
     if (Object.keys(updates).length > 0) {
@@ -132,30 +137,17 @@ export default async (request) => {
       if (updErr) throw httpError(500, 'Could not update job.');
     }
 
-    if (bandAdjustmentDelta !== 0) {
-      const { error: adjErr } = await admin.from('credit_ledger').insert({
-        user_id: existing.user_id,
-        delta: bandAdjustmentDelta,
-        reason: 'band_adjustment',
-        dpr_job_id: jobId,
-      });
-      if (adjErr) throw httpError(500, 'Could not write band-adjustment ledger row.');
-    }
-
+    let refundedCredits = 0;
     if (willRefund) {
-      // Refund the final charged amount (which reflects any band
-      // adjustment we just wrote above).
-      const refundAmount = Number.isInteger(updates.credits_used)
-        ? updates.credits_used
-        : Number.isInteger(existing.credits_used) && existing.credits_used > 0
-          ? existing.credits_used
-          : 1;
-      await admin.from('credit_ledger').insert({
-        user_id: existing.user_id,
-        delta: refundAmount,
-        reason: 'refund',
-        dpr_job_id: jobId,
-      });
+      // Idempotent: the RPC skips if a refund row already exists for
+      // this job, so a re-flip to failed can't double-refund.
+      const { data: refundResult, error: refundErr } = await admin.rpc(
+        'admin_refund_job',
+        { p_job_id: jobId }
+      );
+      if (refundErr) throw httpError(500, 'Could not refund credits.');
+      refundedCredits = refundResult?.delta ?? 0;
+      willRefund = refundResult?.status === 'ok';
     }
 
     await admin.from('audit_log').insert({
@@ -167,6 +159,7 @@ export default async (request) => {
         priorStatus: existing.status,
         updates,
         refunded: willRefund,
+        refundedCredits,
         bandAdjustmentDelta,
         willNotify,
       },
@@ -211,6 +204,7 @@ export default async (request) => {
       ok: true,
       statusChanged,
       refunded: willRefund,
+      refundedCredits,
       bandAdjustmentDelta,
       notified: willNotify,
       emailResult,
