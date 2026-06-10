@@ -14,12 +14,18 @@ body,
   min-height: 100%;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   font-family: 'Outfit', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   font-size: 16px;
   line-height: 1.55;
-  color: #0f172a;
-  background: #f5f7fa;
+  color: #101828;
+  /* Faint vertical wash keeps long pages from feeling like one flat slab. */
+  background: linear-gradient(180deg, #f1f4f8 0%, #f4f6f9 240px);
+  background-color: #f4f6f9;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
@@ -42,6 +48,7 @@ p {
 a {
   color: #0d9488;
   text-decoration: none;
+  transition: color 140ms ease;
 }
 
 a:hover {
@@ -51,6 +58,17 @@ a:hover {
 button {
   font-family: inherit;
   cursor: pointer;
+}
+
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+::selection {
+  background: rgba(13, 148, 136, 0.18);
+  color: #101828;
 }
 
 /* Utility: focus ring used by interactive elements */
@@ -72,6 +90,67 @@ button {
   .container {
     padding: 0 16px;
   }
+}
+
+/* Button loading spinner */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Soft entrance for page content. Applied by Layout to the routed page so
+   navigation feels composed instead of snapping. */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.page-enter {
+  animation: fadeUp 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .page-enter {
+    animation: none;
+  }
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
+/* Slim, unobtrusive scrollbar (WebKit + Firefox) */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #c3ccd9 transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: #c3ccd9;
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 /* Screen-reader-only text */

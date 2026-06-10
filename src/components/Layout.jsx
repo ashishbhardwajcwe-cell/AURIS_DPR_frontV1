@@ -1,4 +1,4 @@
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import Header from './Header.jsx';
 import Footer from './Footer.jsx';
 
@@ -13,10 +13,13 @@ const mainStyle = {
 };
 
 export default function Layout() {
+  const location = useLocation();
   return (
     <div style={shellStyle}>
       <Header />
-      <main style={mainStyle}>
+      {/* key on pathname re-mounts the page wrapper so the entrance
+          animation replays on every route change */}
+      <main style={mainStyle} className="page-enter" key={location.pathname}>
         <Outlet />
       </main>
       <Footer />
