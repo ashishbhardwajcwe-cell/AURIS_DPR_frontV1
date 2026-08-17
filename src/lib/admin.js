@@ -83,6 +83,13 @@ export function setProfileStatus({ userId, status }) {
   return callApi('/api/admin/set-profile-status', { userId, status });
 }
 
+// Writes a single app-wide runtime setting (billing_enabled / active_brand)
+// to app_settings via the service-role function. Whitelisted + validated
+// server-side; the response is { ok: true }.
+export function setSetting({ key, value }) {
+  return callApi('/api/admin/set-setting', { key, value });
+}
+
 // Uploads a single deliverable file to dpr-reports via the signed URL.
 // Small file path — admin deliverables (PDF report, MP3 audio) are
 // typically << 50 MB so a single PUT with XHR progress is sufficient.

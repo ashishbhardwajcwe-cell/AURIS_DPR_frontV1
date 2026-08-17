@@ -31,6 +31,10 @@ order:
 2. `docs/sql/02_milestone3_schema.sql` — `credit_ledger`, `dpr_jobs`,
    `audit_log`, indexes, `credit_balance()`, RLS, storage buckets +
    policies, realtime publication
+3. `docs/sql/05_app_settings.sql` — `app_settings` table for runtime
+   toggles (`billing_enabled`, `active_brand`); RLS enabled with no
+   policies so only the service-role functions can read/write it. Run
+   after the credit-transaction migrations (03, 04).
 
 Verify with the three sanity-check queries at the bottom of file 02:
 

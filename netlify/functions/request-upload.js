@@ -20,6 +20,7 @@ import {
   ValidationError,
 } from './_lib/validation.js';
 import { estimateCredits, isValidBand } from './_lib/estimateCredits.js';
+import { getSettings } from './_lib/settings.js';
 
 export default async (request) => {
   try {
@@ -68,20 +69,29 @@ export default async (request) => {
       hasStructures,
     });
 
+    // Billing gate. In departmental mode (billing off) we charge nothing and
+    // skip the balance check entirely — departmental users have no credits and
+    // must not be blocked. When billing is on, the original commercial
+    // behaviour returns unchanged.
+    const { billingEnabled } = await getSettings();
+    const chargeCredits = billingEnabled ? estimatedCredits : 0;
+
     const { user, admin } = await requireActiveClient(request);
 
-    // Live balance read — defense in depth even though the client also
-    // checks. The credit_balance() RPC is SECURITY DEFINER so the service
-    // role can call it directly.
-    const { data: balance, error: balErr } = await admin.rpc(
-      'credit_balance',
-      { uid: user.id }
-    );
-    if (balErr) throw httpError(500, 'Could not read credit balance.');
-    if ((balance ?? 0) < estimatedCredits) {
-      throw new ValidationError(
-        `You don't have enough credits for this submission. Needs ${estimatedCredits}, have ${balance ?? 0}.`
+    if (billingEnabled) {
+      // Live balance read — defense in depth even though the client also
+      // checks. The credit_balance() RPC is SECURITY DEFINER so the service
+      // role can call it directly.
+      const { data: balance, error: balErr } = await admin.rpc(
+        'credit_balance',
+        { uid: user.id }
       );
+      if (balErr) throw httpError(500, 'Could not read credit balance.');
+      if ((balance ?? 0) < estimatedCredits) {
+        throw new ValidationError(
+          `You don't have enough credits for this submission. Needs ${estimatedCredits}, have ${balance ?? 0}.`
+        );
+      }
     }
 
     // Insert the job. We can't compute upload paths until we know the id,
@@ -94,7 +104,7 @@ export default async (request) => {
         road_stretch: roadStretch,
         notes,
         status: 'submitted',
-        credits_used: estimatedCredits,
+        credits_used: chargeCredits,
         length_band: lengthBand,
         packages,
         has_structures: hasStructures,

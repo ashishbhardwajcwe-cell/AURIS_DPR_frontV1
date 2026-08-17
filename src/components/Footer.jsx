@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useSettings } from '../lib/settings.jsx';
 import { colors, fonts, spacing } from '../styles/theme.js';
 
 const footerStyle = {
@@ -36,10 +37,11 @@ const copyStyle = {
 };
 
 export default function Footer() {
+  const { brand } = useSettings();
   return (
     <footer style={footerStyle}>
       <div className="container" style={innerStyle}>
-        <span style={copyStyle}>© AURIS · DPR Analyzer Pro</span>
+        <span style={copyStyle}>{brand.footerText}</span>
         <nav style={linksStyle} aria-label="Footer">
           <Link to="/privacy" style={linkStyle}>
             Privacy

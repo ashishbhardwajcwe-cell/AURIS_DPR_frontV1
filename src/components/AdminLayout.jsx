@@ -63,6 +63,12 @@ export default function AdminLayout() {
             >
               Clients
             </NavLink>
+            <NavLink
+              to="/admin/settings"
+              style={({ isActive }) => (isActive ? linkActive : linkBase)}
+            >
+              Settings
+            </NavLink>
           </nav>
         </div>
       </div>

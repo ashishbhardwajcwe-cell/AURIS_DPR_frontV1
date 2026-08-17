@@ -1,3 +1,4 @@
+import { useSettings } from '../lib/settings.jsx';
 import { colors, fonts, radii, shadows, spacing } from '../styles/theme.js';
 
 const wrapStyle = {
@@ -47,14 +48,16 @@ const listStyle = {
 };
 
 export default function Privacy() {
+  const { brand, billingEnabled } = useSettings();
   return (
     <div style={wrapStyle}>
       <div className="container">
         <article style={cardStyle}>
           <h1 style={titleStyle}>Privacy &amp; Data Handling</h1>
           <p style={pStyle}>
-            DPR Analyzer Pro is operated by AURIS. This page explains how we
-            handle the documents and information you share with us.
+            {brand.productName} is operated by {brand.orgName}. This page
+            explains how we handle the documents and information you share with
+            us.
           </p>
 
           <h2 style={h2Style}>How your files are processed</h2>
@@ -82,7 +85,8 @@ export default function Privacy() {
           <p style={pStyle}>
             Uploaded source files and delivered reports are deleted 30 days
             after the report is delivered. Job metadata (project name,
-            submission date, credit usage) is retained for billing and audit
+            submission date{billingEnabled ? ', credit usage' : ''}) is
+            retained for {billingEnabled ? 'billing and audit' : 'audit'}{' '}
             purposes.
           </p>
 

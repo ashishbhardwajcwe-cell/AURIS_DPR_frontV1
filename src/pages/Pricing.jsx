@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import Alert from '../components/Alert.jsx';
 import Button from '../components/Button.jsx';
 import { useAuth } from '../lib/auth.jsx';
+import { useSettings } from '../lib/settings.jsx';
 import { PACK_LIST, formatInr } from '../lib/packs.js';
 import { purchasePack } from '../lib/payments.js';
 import { CREDIT_PRICE } from '../lib/estimateCredits.js';
@@ -196,11 +197,32 @@ function formatRupees(amount) {
 export default function Pricing() {
   const navigate = useNavigate();
   const { profile, isPending } = useAuth();
+  const { billingEnabled } = useSettings();
   const isActive = profile?.status === 'active';
 
   const [busyPackId, setBusyPackId] = useState(null);
   const [error, setError] = useState(null);
   const [flash, setFlash] = useState(null);
+
+  // Departmental mode: billing is off, so a manually-typed /pricing URL must
+  // not expose the pack grid or rate card. Show a neutral notice instead.
+  if (!billingEnabled) {
+    return (
+      <div style={wrapStyle}>
+        <div className="container">
+          <p style={{ marginBottom: spacing.md }}>
+            <Link to="/dashboard" style={linkStyle}>
+              ← Back to dashboard
+            </Link>
+          </p>
+          <Alert variant="neutral" title="Billing is not enabled for this portal">
+            This portal is running in departmental mode. There are no credits or
+            payments to manage here.
+          </Alert>
+        </div>
+      </div>
+    );
+  }
 
   async function handleBuy(pack) {
     setBusyPackId(pack.id);

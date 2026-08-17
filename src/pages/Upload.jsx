@@ -6,6 +6,7 @@ import FormField from '../components/FormField.jsx';
 import FileDropzone from '../components/FileDropzone.jsx';
 import UploadProgress from '../components/UploadProgress.jsx';
 import { useAuth } from '../lib/auth.jsx';
+import { useSettings } from '../lib/settings.jsx';
 import { getCreditBalance } from '../lib/credits.js';
 import { describeFileIssues } from '../lib/uploadLimits.js';
 import {
@@ -126,6 +127,7 @@ const linkStyle = {
 export default function Upload() {
   const navigate = useNavigate();
   const { user, profile, isPending } = useAuth();
+  const { billingEnabled } = useSettings();
 
   const [projectName, setProjectName] = useState('');
   const [roadStretch, setRoadStretch] = useState('');
@@ -173,7 +175,7 @@ export default function Upload() {
     files.length === 0 ||
     issues.length > 0 ||
     !isActive ||
-    !hasEnoughCredits ||
+    (billingEnabled && !hasEnoughCredits) ||
     phase === PHASES.STARTING ||
     phase === PHASES.UPLOADING ||
     phase === PHASES.CONFIRMING;
@@ -332,12 +334,16 @@ export default function Upload() {
         <div style={cardStyle}>
           <h1 style={titleStyle}>Upload a DPR</h1>
           <p style={subStyle}>
-            Submit a Detailed Project Report for compliance analysis. Credit
-            cost depends on size and complexity — see the{' '}
-            <Link to="/pricing" style={linkStyle}>
-              rate card
-            </Link>
-            .
+            Submit a Detailed Project Report for compliance analysis.
+            {billingEnabled && (
+              <>
+                {' '}Credit cost depends on size and complexity — see the{' '}
+                <Link to="/pricing" style={linkStyle}>
+                  rate card
+                </Link>
+                .
+              </>
+            )}
           </p>
 
           {isPending && (
@@ -346,7 +352,7 @@ export default function Upload() {
             </Alert>
           )}
 
-          {!isPending && balanceKnown && balance < estimate && (
+          {billingEnabled && !isPending && balanceKnown && balance < estimate && (
             <Alert variant="info" title="Not enough credits">
               You have {balance} credit{balance === 1 ? '' : 's'} but this
               submission needs {estimate}.{' '}
@@ -407,6 +413,20 @@ export default function Upload() {
                 disabled={submitting}
                 placeholder="Anything specific you want us to look at"
               />
+
+              {!billingEnabled && (
+                <h2
+                  style={{
+                    fontFamily: fonts.heading,
+                    fontSize: '18px',
+                    color: colors.textPrimary,
+                    marginTop: spacing.md,
+                    marginBottom: 0,
+                  }}
+                >
+                  Project details
+                </h2>
+              )}
 
               <div
                 style={{
@@ -503,24 +523,26 @@ export default function Upload() {
                 </div>
               )}
 
-              <div style={estimateCardStyle(balanceKnown && balance < estimate)}>
-                <span>
-                  Estimated cost:{' '}
-                  <strong>
-                    {estimate} credit{estimate === 1 ? '' : 's'} (
-                    {formatRupees(estimate * CREDIT_PRICE)})
-                  </strong>
-                  {' · '}
-                  Your balance:{' '}
-                  <strong>
-                    {balanceKnown ? `${balance} credit${balance === 1 ? '' : 's'}` : '—'}
-                  </strong>
-                </span>
-                <span style={{ fontSize: 12.5, color: colors.textMuted }}>
-                  Final credit cost is confirmed by the operator when the
-                  file is reviewed.
-                </span>
-              </div>
+              {billingEnabled && (
+                <div style={estimateCardStyle(balanceKnown && balance < estimate)}>
+                  <span>
+                    Estimated cost:{' '}
+                    <strong>
+                      {estimate} credit{estimate === 1 ? '' : 's'} (
+                      {formatRupees(estimate * CREDIT_PRICE)})
+                    </strong>
+                    {' · '}
+                    Your balance:{' '}
+                    <strong>
+                      {balanceKnown ? `${balance} credit${balance === 1 ? '' : 's'}` : '—'}
+                    </strong>
+                  </span>
+                  <span style={{ fontSize: 12.5, color: colors.textMuted }}>
+                    Final credit cost is confirmed by the operator when the
+                    file is reviewed.
+                  </span>
+                </div>
+              )}
 
               {issues.length > 0 && (
                 <Alert variant="error" style={{ marginTop: spacing.md }}>
