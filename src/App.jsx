@@ -16,6 +16,7 @@ import Pricing from './pages/Pricing.jsx';
 import AdminJobs from './pages/AdminJobs.jsx';
 import AdminJobDetail from './pages/AdminJobDetail.jsx';
 import AdminClients from './pages/AdminClients.jsx';
+import AdminSettings from './pages/AdminSettings.jsx';
 
 export default function App() {
   return (
@@ -45,6 +46,7 @@ export default function App() {
             <Route path="/admin/jobs" element={<AdminJobs />} />
             <Route path="/admin/jobs/:jobId" element={<AdminJobDetail />} />
             <Route path="/admin/clients" element={<AdminClients />} />
+            <Route path="/admin/settings" element={<AdminSettings />} />
           </Route>
         </Route>
 

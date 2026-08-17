@@ -14,6 +14,7 @@ import { errorResponse, httpError, json } from './_lib/response.js';
 import { ValidationError } from './_lib/validation.js';
 import { sendEmail, fireMakeWebhook } from './_lib/email.js';
 import { operatorNewUploadTemplate } from './_lib/templates.js';
+import { getSettings } from './_lib/settings.js';
 
 export default async (request) => {
   try {
@@ -44,7 +45,7 @@ export default async (request) => {
     const { data: job, error: jobErr } = await admin
       .from('dpr_jobs')
       .select(
-        'id, user_id, status, upload_paths, project_name, road_stretch, notes, credits_used'
+        'id, user_id, status, upload_paths, project_name, road_stretch, notes, credits_used, total_size_bytes'
       )
       .eq('id', jobId)
       .maybeSingle();
@@ -54,32 +55,57 @@ export default async (request) => {
       throw httpError(403, 'You do not own this job.');
     }
 
-    // Atomic deduction via the confirm_dpr_submission RPC: idempotency
-    // check, balance re-check, ledger insert, and total_size stamp all run
-    // in one transaction under a per-user advisory lock, so two concurrent
-    // submissions can't both pass the balance check.
-    const { data: result, error: rpcErr } = await admin.rpc(
-      'confirm_dpr_submission',
-      {
-        p_user_id: user.id,
-        p_job_id: jobId,
-        p_total_size_bytes: totalSizeBytes,
-      }
-    );
-    if (rpcErr) throw httpError(500, 'Could not deduct credit.');
+    // Billing gate — mirrors the enforcement gate in request-upload.js.
+    // In departmental mode (billing off) there is no credit to deduct and the
+    // client has a zero balance, so we must NOT call confirm_dpr_submission:
+    // that RPC clamps the charge to a minimum of 1 credit and rejects a
+    // zero-balance user with 'insufficient_credits'. Instead we stamp the
+    // upload size directly (the only side effect of the RPC that still
+    // applies) and skip the ledger write entirely. The RPC is left untouched
+    // so commercial behaviour returns unchanged the moment billing is on.
+    const { billingEnabled } = await getSettings();
 
-    if (result?.status === 'already_confirmed') {
-      return json({ ok: true, alreadyConfirmed: true });
-    }
-    if (result?.status === 'insufficient_credits') {
-      throw new ValidationError(
-        `You no longer have enough credits for this submission. Needs ${result.required}, have ${result.balance}. Please top up and try again.`
+    let creditsToDeduct = 0;
+    if (billingEnabled) {
+      // Atomic deduction via the confirm_dpr_submission RPC: idempotency
+      // check, balance re-check, ledger insert, and total_size stamp all run
+      // in one transaction under a per-user advisory lock, so two concurrent
+      // submissions can't both pass the balance check.
+      const { data: result, error: rpcErr } = await admin.rpc(
+        'confirm_dpr_submission',
+        {
+          p_user_id: user.id,
+          p_job_id: jobId,
+          p_total_size_bytes: totalSizeBytes,
+        }
       );
+      if (rpcErr) throw httpError(500, 'Could not deduct credit.');
+
+      if (result?.status === 'already_confirmed') {
+        return json({ ok: true, alreadyConfirmed: true });
+      }
+      if (result?.status === 'insufficient_credits') {
+        throw new ValidationError(
+          `You no longer have enough credits for this submission. Needs ${result.required}, have ${result.balance}. Please top up and try again.`
+        );
+      }
+      if (result?.status !== 'ok') {
+        throw httpError(500, 'Could not confirm the submission.');
+      }
+      creditsToDeduct = result.credits_deducted;
+    } else {
+      // Idempotency guard: total_size_bytes is null until first confirm, so a
+      // re-confirm (retry / double submit) short-circuits without re-notifying.
+      if (job.total_size_bytes != null) {
+        return json({ ok: true, alreadyConfirmed: true });
+      }
+      const { error: stampErr } = await admin
+        .from('dpr_jobs')
+        .update({ total_size_bytes: totalSizeBytes })
+        .eq('id', jobId);
+      if (stampErr) throw httpError(500, 'Could not confirm the submission.');
+      creditsToDeduct = 0;
     }
-    if (result?.status !== 'ok') {
-      throw httpError(500, 'Could not confirm the submission.');
-    }
-    const creditsToDeduct = result.credits_deducted;
 
     const fileCount = Array.isArray(job.upload_paths)
       ? job.upload_paths.length

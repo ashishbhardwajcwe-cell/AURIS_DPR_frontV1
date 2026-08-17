@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useSettings } from '../lib/settings.jsx';
 import {
   colors,
   gradients,
@@ -131,11 +132,12 @@ const cardBody = {
 };
 
 export default function Landing() {
+  const { brand } = useSettings();
   return (
     <>
       <section style={heroStyle}>
         <div className="container" style={heroInnerStyle}>
-          <span style={eyebrowStyle}>AURIS · DPR Analyzer Pro</span>
+          <span style={eyebrowStyle}>{brand.eyebrow}</span>
           <h1 style={headlineStyle}>
             Compliance analysis for road &amp; highway DPRs — delivered as a
             report and an audio overview.

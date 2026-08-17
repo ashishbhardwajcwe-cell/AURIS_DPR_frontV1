@@ -5,6 +5,7 @@ import Button from '../components/Button.jsx';
 import CreditBalanceCard from '../components/CreditBalanceCard.jsx';
 import JobsTable from '../components/JobsTable.jsx';
 import { useAuth } from '../lib/auth.jsx';
+import { useSettings } from '../lib/settings.jsx';
 import { getCreditBalance } from '../lib/credits.js';
 import { listJobsForUser, subscribeToUserJobs } from '../lib/jobs.js';
 import { colors, fonts, radii, shadows, spacing } from '../styles/theme.js';
@@ -96,6 +97,7 @@ function useIsNarrow(breakpointPx = 880) {
 export default function Dashboard() {
   const navigate = useNavigate();
   const { user, profile, isPending } = useAuth();
+  const { billingEnabled } = useSettings();
   const narrow = useIsNarrow();
 
   const [balance, setBalance] = useState(null);
@@ -107,7 +109,9 @@ export default function Dashboard() {
   const userId = user?.id;
   const isActive = profile?.status === 'active';
   const hasCredits = (balance ?? 0) > 0;
-  const canUpload = isActive && hasCredits;
+  // Departmental mode (billing off): an approved account can always upload —
+  // there are no credits to gate on. Commercial mode keeps the credit gate.
+  const canUpload = isActive && (billingEnabled ? hasCredits : true);
 
   const loadJobs = useCallback(async () => {
     if (!userId) return;
@@ -183,13 +187,24 @@ export default function Dashboard() {
             title="Your account is pending approval"
             style={{ marginBottom: spacing.lg }}
           >
-            We&apos;re reviewing your registration and will activate your
-            account along with a trial credit allocation. You&apos;ll receive
-            an email when it&apos;s ready — usually within one business day.
+            {billingEnabled ? (
+              <>
+                We&apos;re reviewing your registration and will activate your
+                account along with a trial credit allocation. You&apos;ll
+                receive an email when it&apos;s ready — usually within one
+                business day.
+              </>
+            ) : (
+              <>
+                We&apos;re reviewing your registration and will activate your
+                account shortly. You&apos;ll receive an email when it&apos;s
+                ready — usually within one business day.
+              </>
+            )}
           </Alert>
         )}
 
-        {!isPending && isActive && !hasCredits && !loadingBalance && (
+        {billingEnabled && !isPending && isActive && !hasCredits && !loadingBalance && (
           <Alert
             variant="info"
             title="You don't have any credits yet"
@@ -212,8 +227,18 @@ export default function Dashboard() {
           </Alert>
         )}
 
-        <div style={narrow ? gridStyleMobile : gridStyle}>
-          <CreditBalanceCard balance={balance} loading={loadingBalance} />
+        <div
+          style={
+            billingEnabled
+              ? narrow
+                ? gridStyleMobile
+                : gridStyle
+              : { marginBottom: spacing.lg }
+          }
+        >
+          {billingEnabled && (
+            <CreditBalanceCard balance={balance} loading={loadingBalance} />
+          )}
 
           <div style={uploadCardStyle}>
             <h2 style={uploadTitleStyle}>Ready to analyse a new DPR?</h2>
@@ -242,7 +267,9 @@ export default function Dashboard() {
                 >
                   {isPending
                     ? 'Available once your account is approved.'
-                    : 'Add credits to start a new submission.'}
+                    : billingEnabled
+                    ? 'Add credits to start a new submission.'
+                    : 'Available once your account is approved.'}
                 </span>
               )}
             </div>

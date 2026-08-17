@@ -6,6 +6,7 @@ import ReportDownloadCard from '../components/ReportDownloadCard.jsx';
 import StatusBadge from '../components/StatusBadge.jsx';
 import StatusTimeline from '../components/StatusTimeline.jsx';
 import { useAuth } from '../lib/auth.jsx';
+import { useSettings } from '../lib/settings.jsx';
 import { getJob, subscribeToJob } from '../lib/jobs.js';
 import { formatDateTime, formatBytes } from '../lib/format.js';
 import { colors, fonts, radii, shadows, spacing } from '../styles/theme.js';
@@ -87,6 +88,7 @@ const filenameFromPath = (path) =>
 export default function JobDetail() {
   const { jobId } = useParams();
   const { isAdmin } = useAuth();
+  const { billingEnabled } = useSettings();
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -254,10 +256,12 @@ export default function JobDetail() {
                 {uploadCount} · {formatBytes(job.total_size_bytes)}
               </div>
             </div>
-            <div>
-              <div style={metaLabelStyle}>Credits used</div>
-              <div style={metaValueStyle}>{job.credits_used ?? 1}</div>
-            </div>
+            {billingEnabled && (
+              <div>
+                <div style={metaLabelStyle}>Credits used</div>
+                <div style={metaValueStyle}>{job.credits_used ?? 1}</div>
+              </div>
+            )}
             {job.completed_at && (
               <div>
                 <div style={metaLabelStyle}>
@@ -310,7 +314,8 @@ export default function JobDetail() {
         {isCancelled && (
           <div style={cardStyle}>
             <Alert variant="neutral" title="Submission cancelled">
-              This submission was cancelled. No credit was deducted.
+              This submission was cancelled.
+              {billingEnabled ? ' No credit was deducted.' : ''}
             </Alert>
           </div>
         )}
@@ -386,9 +391,11 @@ export default function JobDetail() {
                 Please reach out for details.
               </Alert>
             )}
-            <Alert variant="success" style={{ marginTop: spacing.sm }}>
-              Your credit has been refunded.
-            </Alert>
+            {billingEnabled && (
+              <Alert variant="success" style={{ marginTop: spacing.sm }}>
+                Your credit has been refunded.
+              </Alert>
+            )}
           </div>
         )}
       </div>

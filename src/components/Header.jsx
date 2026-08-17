@@ -1,5 +1,6 @@
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/auth.jsx';
+import { useSettings } from '../lib/settings.jsx';
 import {
   colors,
   gradients,
@@ -141,6 +142,7 @@ const adminLinkStyle = {
 export default function Header() {
   const navigate = useNavigate();
   const { isAuthenticated, isAdmin, isPending, profile, user, signOut } = useAuth();
+  const { brand } = useSettings();
 
   async function handleSignOut() {
     await signOut();
@@ -156,22 +158,38 @@ export default function Header() {
         <Link
           to={isAuthenticated ? '/dashboard' : '/'}
           style={brandStyle}
-          aria-label="DPR Analyzer Pro home"
+          aria-label={`${brand.productName} home`}
         >
-          <img
-            src="/auris-logo.png"
-            alt="AURIS"
-            style={logoStyle}
-            onError={(e) => {
-              e.currentTarget.style.display = 'none';
-            }}
-          />
-          <span style={wordmarkStyle}>
-            <span style={productNameStyle}>DPR Analyzer Pro</span>
-            <span style={taglineStyle}>
-              AI-Assisted DPR Compliance Analysis · Road &amp; Highway Projects
+          {brand.wordmark ? (
+            // Wide wordmark contains the product name already — render it
+            // alone in place of both the square logo and the name span.
+            <span style={wordmarkStyle}>
+              <img
+                src={brand.wordmark}
+                alt={brand.productName}
+                style={{ height: 34, width: 'auto', display: 'block' }}
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+              <span style={taglineStyle}>{brand.tagline}</span>
             </span>
-          </span>
+          ) : (
+            <>
+              <img
+                src={brand.logo}
+                alt={brand.orgName}
+                style={logoStyle}
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+              <span style={wordmarkStyle}>
+                <span style={productNameStyle}>{brand.productName}</span>
+                <span style={taglineStyle}>{brand.tagline}</span>
+              </span>
+            </>
+          )}
         </Link>
 
         <nav style={navStyle} aria-label="Primary">
