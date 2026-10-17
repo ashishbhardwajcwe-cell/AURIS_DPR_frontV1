@@ -17,6 +17,18 @@
 # rewrite would break subdirectory functions (e.g. admin/grant-credits)
 # because Netlify deploys those by basename, not by relative path.
 
+# Canonical domain — the portal lives on dpranalyzer.com only. Any visit to
+# the default Netlify subdomain is permanently redirected there, keeping the
+# path, query and #hash (so a Supabase auth hash still completes sign-in on
+# the right domain). Deploy previews (deploy-preview-N--…) use a different
+# host and are unaffected. Must stay ABOVE the SPA fallback: Netlify applies
+# the first matching rule.
+[[redirects]]
+  from = "https://aurisdprfrontver1.netlify.app/*"
+  to = "https://dpranalyzer.com/:splat"
+  status = 301
+  force = true
+
 # SPA fallback — every non-asset, non-API route should serve index.html
 # so React Router can take over on the client. Functions are matched
 # before this redirect runs, so /api/* never falls through to here.
