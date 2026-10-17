@@ -147,8 +147,7 @@ export default function Landing() {
           <p style={subStyle}>
             Upload your Detailed Project Report and receive a structured
             compliance review against IRC and MoRTH standards, prepared by
-            qualified analysts. Built for consultancy firms working with NHAI,
-            MoRTH, PWD, and BRO.
+            qualified analysts. {brand.audience}
           </p>
           <div style={ctaRowStyle}>
             {isAuthenticated ? (
