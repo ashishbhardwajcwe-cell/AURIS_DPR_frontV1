@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useAuth } from '../lib/auth.jsx';
 import { useSettings } from '../lib/settings.jsx';
 import {
   colors,
@@ -133,6 +134,7 @@ const cardBody = {
 
 export default function Landing() {
   const { brand } = useSettings();
+  const { isAuthenticated } = useAuth();
   return (
     <>
       <section style={heroStyle}>
@@ -149,9 +151,15 @@ export default function Landing() {
             MoRTH, PWD, and BRO.
           </p>
           <div style={ctaRowStyle}>
-            <Link to="/login" style={primaryCta}>
-              Log in
-            </Link>
+            {isAuthenticated ? (
+              <Link to="/dashboard" style={primaryCta}>
+                Go to dashboard
+              </Link>
+            ) : (
+              <Link to="/login" style={primaryCta}>
+                Log in
+              </Link>
+            )}
             <Link to="/privacy" style={secondaryCta}>
               How we handle your data
             </Link>

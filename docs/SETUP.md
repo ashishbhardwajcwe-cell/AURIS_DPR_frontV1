@@ -137,6 +137,30 @@ When you're ready:
 7. Back in Supabase **Authentication → URL Configuration**, update the
    **Site URL** to match the production URL
 
+### Custom domain (dpranalyzer.com)
+
+Everything must resolve to `https://dpranalyzer.com`. If any one of
+these is missed, sign-in bounces users to `aurisdprfrontver1.netlify.app`:
+
+1. **Netlify → Domain management**: `dpranalyzer.com` is the **primary
+   domain**, HTTPS certificate issued. `netlify.toml` 301-redirects the
+   `*.netlify.app` subdomain to it.
+2. **Supabase → Authentication → URL Configuration**:
+   - **Site URL** = `https://dpranalyzer.com`
+   - **Redirect URLs** include `https://dpranalyzer.com/**` and
+     `https://www.dpranalyzer.com/**`. Supabase silently falls back to the
+     Site URL for any `redirectTo` not on this list — that fallback is what
+     sends people to the wrong domain after Google sign-in.
+3. **Netlify env**: `VITE_APP_URL=https://dpranalyzer.com` (used in email
+   links), then **redeploy** — `VITE_*` values are baked in at build time.
+4. **Google Cloud → APIs & Services → Credentials → OAuth client**: add
+   `https://dpranalyzer.com` to **Authorized JavaScript origins**. Keep the
+   Supabase `…/auth/v1/callback` URL as the redirect URI. On the **OAuth
+   consent screen**, set the app name, logo, home page and privacy-policy
+   links to `dpranalyzer.com`.
+5. Any external webhook (e.g. Razorpay) should point at
+   `https://dpranalyzer.com/api/…`, not the netlify.app host.
+
 ## Step 6 — Promote yourself to admin
 
 Sign up through the portal once (email or Google), then in the
