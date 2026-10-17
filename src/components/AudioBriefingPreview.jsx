@@ -1,10 +1,33 @@
 import { useEffect, useRef, useState } from 'react';
 import { colors, fonts, radii } from '../styles/theme.js';
 
-// Landing-page sample of the audio deliverable. If a short excerpt has been
-// published at EXCERPT_SRC the controls play it; if the file is missing the
-// card stays a static illustration. Either way no real project is named.
-const EXCERPT_SRC = '/audio/briefing-excerpt.mp3';
+// Landing-page sample of the audio deliverable. Two short, technical-only
+// excerpts are published; each visitor is assigned one at random and keeps
+// it on later visits, with the other as a backup if it fails to load. If
+// neither loads the card stays a static illustration. No project is named.
+const EXCERPTS = ['/audio/briefing-excerpt-a.mp3', '/audio/briefing-excerpt-b.mp3'];
+const EXCERPT_KEY = 'dpr.sampleExcerpt';
+
+// [assigned excerpt, backup]. Storage can be unavailable (private windows,
+// blocked site data); then the visitor just gets a fresh random pick.
+function excerptOrder() {
+  let first = null;
+  try {
+    const saved = window.localStorage.getItem(EXCERPT_KEY);
+    if (saved === '0' || saved === '1') first = Number(saved);
+  } catch {
+    /* storage unavailable */
+  }
+  if (first === null) {
+    first = Math.random() < 0.5 ? 0 : 1;
+    try {
+      window.localStorage.setItem(EXCERPT_KEY, String(first));
+    } catch {
+      /* storage unavailable */
+    }
+  }
+  return [EXCERPTS[first], EXCERPTS[1 - first]];
+}
 
 const BARS = [
   0.35, 0.55, 0.8, 0.45, 0.95, 0.6, 0.75, 0.4, 0.9, 0.65, 0.5, 0.85, 0.7,
@@ -210,14 +233,21 @@ export default function AudioBriefingPreview({ compact = false }) {
       setPlaying(false);
       audio.currentTime = 0;
     };
+    // A missing file comes back as the SPA's index.html and fails to decode;
+    // try the backup excerpt, and if that fails too the card stays static.
+    const sources = excerptOrder();
+    let attempt = 0;
+    const onError = () => {
+      attempt += 1;
+      if (attempt < sources.length) audio.src = sources[attempt];
+    };
     audio.addEventListener('loadedmetadata', onMeta);
     audio.addEventListener('timeupdate', onTime);
     audio.addEventListener('play', onPlay);
     audio.addEventListener('pause', onPause);
     audio.addEventListener('ended', onEnded);
-    // A missing file comes back as the SPA's index.html, fails to decode and
-    // never fires loadedmetadata, so the card simply stays static.
-    audio.src = EXCERPT_SRC;
+    audio.addEventListener('error', onError);
+    audio.src = sources[0];
     audioRef.current = audio;
     return () => {
       audio.pause();
@@ -226,6 +256,7 @@ export default function AudioBriefingPreview({ compact = false }) {
       audio.removeEventListener('play', onPlay);
       audio.removeEventListener('pause', onPause);
       audio.removeEventListener('ended', onEnded);
+      audio.removeEventListener('error', onError);
       audioRef.current = null;
     };
   }, []);
