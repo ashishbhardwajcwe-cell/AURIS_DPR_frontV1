@@ -5,7 +5,7 @@ import { ValidationError } from './_lib/validation.js';
 // Whitelist of settable keys + validators. Anything else is rejected.
 const ALLOWED = {
   billing_enabled: (v) => typeof v === 'boolean',
-  active_brand: (v) => typeof v === 'string' && ['auris', 'bro', 'rs'].includes(v),
+  active_brand: (v) => typeof v === 'string' && ['auris', 'bro'].includes(v),
 };
 
 export default async (request) => {

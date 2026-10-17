@@ -1,8 +1,10 @@
+import { useEffect, useRef, useState } from 'react';
 import { colors, fonts, radii } from '../styles/theme.js';
 
-// Landing-page illustration of the audio deliverable. Purely visual: no audio
-// is loaded and nothing is clickable. It shows what a briefing looks like
-// without naming any real project.
+// Landing-page sample of the audio deliverable. If a short excerpt has been
+// published at EXCERPT_SRC the controls play it; if the file is missing the
+// card stays a static illustration. Either way no real project is named.
+const EXCERPT_SRC = '/audio/briefing-excerpt.mp3';
 
 const BARS = [
   0.35, 0.55, 0.8, 0.45, 0.95, 0.6, 0.75, 0.4, 0.9, 0.65, 0.5, 0.85, 0.7,
@@ -152,21 +154,109 @@ const factsStyle = {
   color: colors.textOnDarkMuted,
 };
 
+function formatTime(seconds) {
+  const t = Math.max(0, Math.floor(seconds || 0));
+  return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
+}
+
+const buttonReset = {
+  border: 'none',
+  padding: 0,
+  font: 'inherit',
+  cursor: 'pointer',
+};
+
 export default function AudioBriefingPreview() {
-  const playedPct = (PLAYED / BARS.length) * 100;
+  const audioRef = useRef(null);
+  const [ready, setReady] = useState(false);
+  const [playing, setPlaying] = useState(false);
+  const [time, setTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+
+  useEffect(() => {
+    const audio = new Audio();
+    audio.preload = 'metadata';
+    const onMeta = () => {
+      if (Number.isFinite(audio.duration) && audio.duration > 0) {
+        setDuration(audio.duration);
+        setReady(true);
+      }
+    };
+    const onTime = () => setTime(audio.currentTime);
+    const onPlay = () => setPlaying(true);
+    const onPause = () => setPlaying(false);
+    const onEnded = () => {
+      setPlaying(false);
+      audio.currentTime = 0;
+    };
+    audio.addEventListener('loadedmetadata', onMeta);
+    audio.addEventListener('timeupdate', onTime);
+    audio.addEventListener('play', onPlay);
+    audio.addEventListener('pause', onPause);
+    audio.addEventListener('ended', onEnded);
+    // A missing file comes back as the SPA's index.html, fails to decode and
+    // never fires loadedmetadata, so the card simply stays static.
+    audio.src = EXCERPT_SRC;
+    audioRef.current = audio;
+    return () => {
+      audio.pause();
+      audio.removeEventListener('loadedmetadata', onMeta);
+      audio.removeEventListener('timeupdate', onTime);
+      audio.removeEventListener('play', onPlay);
+      audio.removeEventListener('pause', onPause);
+      audio.removeEventListener('ended', onEnded);
+      audioRef.current = null;
+    };
+  }, []);
+
+  function togglePlay() {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (audio.paused) audio.play().catch(() => {});
+    else audio.pause();
+  }
+
+  function skip(delta) {
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.currentTime = Math.min(Math.max(audio.currentTime + delta, 0), duration);
+  }
+
+  const progress = ready ? time / duration : PLAYED / BARS.length;
+  const playedBars = Math.round(progress * BARS.length);
+  const playedPct = progress * 100;
+  // Static illustration keeps its gentle motion; the live player only
+  // animates while it is actually playing.
+  const animate = ready ? playing : true;
+
+  const playIcon = playing ? (
+    <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="7" y="5.5" width="3.6" height="13" rx="1" fill={colors.navy900} />
+      <rect x="13.4" y="5.5" width="3.6" height="13" rx="1" fill={colors.navy900} />
+    </svg>
+  ) : (
+    <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M8 5.5v13l10.5-6.5z" fill={colors.navy900} />
+    </svg>
+  );
+
   return (
     <div
       style={cardStyle}
-      role="img"
-      aria-label="Sample audio briefing: a podcast-style player summarising a DPR compliance review in about five minutes"
+      role={ready ? 'region' : 'img'}
+      aria-label={
+        ready
+          ? 'Sample audio briefing excerpt'
+          : 'Sample audio briefing: a podcast-style player summarising a DPR compliance review in about five minutes'
+      }
     >
       <div style={topRowStyle}>
-        <span style={sampleTagStyle}>Sample output</span>
+        <span style={sampleTagStyle}>{ready ? 'Listen to a sample' : 'Sample output'}</span>
         <span style={durationStyle}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3" />
           </svg>
-          4–5 min
+          {ready ? `Excerpt · ${formatTime(duration)}` : '4–5 min'}
         </span>
       </div>
 
@@ -183,11 +273,11 @@ export default function AudioBriefingPreview() {
 
       <div style={waveStyle} aria-hidden="true">
         {BARS.map((h, i) => {
-          const played = i < PLAYED;
+          const played = i < playedBars;
           return (
             <span
               key={i}
-              className={played ? 'wave-live' : undefined}
+              className={played && animate ? 'wave-live' : undefined}
               style={{
                 flex: 1,
                 height: `${h * 100}%`,
@@ -227,26 +317,42 @@ export default function AudioBriefingPreview() {
         />
       </div>
       <div style={timesStyle} aria-hidden="true">
-        <span>1:52</span>
-        <span>4:38</span>
+        <span>{ready ? formatTime(time) : '1:52'}</span>
+        <span>{ready ? formatTime(duration) : '4:38'}</span>
       </div>
 
-      <div style={controlsStyle} aria-hidden="true">
-        <span style={skipStyle}>−10</span>
-        <span style={playStyle}>
-          <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M8 5.5v13l10.5-6.5z" fill={colors.navy900} />
-          </svg>
-        </span>
-        <span style={skipStyle}>+10</span>
-      </div>
+      {ready ? (
+        <div style={controlsStyle}>
+          <button type="button" style={{ ...buttonReset, ...skipStyle, background: 'transparent' }} onClick={() => skip(-10)} aria-label="Back 10 seconds">
+            −10
+          </button>
+          <button type="button" style={{ ...buttonReset, ...playStyle }} onClick={togglePlay} aria-label={playing ? 'Pause sample briefing' : 'Play sample briefing'}>
+            {playIcon}
+          </button>
+          <button type="button" style={{ ...buttonReset, ...skipStyle, background: 'transparent' }} onClick={() => skip(10)} aria-label="Forward 10 seconds">
+            +10
+          </button>
+        </div>
+      ) : (
+        <div style={controlsStyle} aria-hidden="true">
+          <span style={skipStyle}>−10</span>
+          <span style={playStyle}>{playIcon}</span>
+          <span style={skipStyle}>+10</span>
+        </div>
+      )}
 
       <div style={factsStyle} aria-hidden="true">
-        <span>Findings consolidated</span>
-        <span>·</span>
-        <span>Plain-spoken</span>
-        <span>·</span>
-        <span>Listen anywhere</span>
+        {ready ? (
+          <span>Full briefings run 4–5 minutes</span>
+        ) : (
+          <>
+            <span>Findings consolidated</span>
+            <span>·</span>
+            <span>Plain-spoken</span>
+            <span>·</span>
+            <span>Listen anywhere</span>
+          </>
+        )}
       </div>
     </div>
   );
