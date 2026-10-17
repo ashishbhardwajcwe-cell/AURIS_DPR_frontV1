@@ -19,6 +19,7 @@ export const BRANDS = {
     logo: '/bro-logo.png',                    // square emblem (fallback only)
     logoIcon: '/bro-logo-icon.png',           // square icon for the browser tab
     wordmark: '/dpr-wordmark-on-dark.png',    // wide cream wordmark for the dark header
+    wordmarkLight: '/dpr-wordmark-on-light.png', // navy wordmark for white cards (login/sign-up)
     productName: 'DPR Analyzer Pro',
     tagline: 'AI-Based DPR Compliance Engine',
     orgName: 'Border Roads Organisation',
@@ -35,6 +36,7 @@ export const BRANDS = {
     logo: '/rs-logo.png',
     logoIcon: '/rs-logo-icon.png',
     wordmark: '/dpr-wordmark-on-dark.png',    // reuses the product wordmark on the dark header
+    wordmarkLight: '/dpr-wordmark-on-light.png',
     productName: 'DPR Analyzer Pro',
     tagline: 'AI-Based DPR Compliance Engine',
     orgName: 'RS',

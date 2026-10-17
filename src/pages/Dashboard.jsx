@@ -108,6 +108,7 @@ export default function Dashboard() {
 
   const userId = user?.id;
   const isActive = profile?.status === 'active';
+  const isSuspended = profile?.status === 'suspended';
   const hasCredits = (balance ?? 0) > 0;
   // Departmental mode (billing off): an approved account can always upload —
   // there are no credits to gate on. Commercial mode keeps the credit gate.
@@ -221,6 +222,18 @@ export default function Dashboard() {
           </Alert>
         )}
 
+        {isSuspended && (
+          <Alert
+            variant="error"
+            title="Your account is suspended"
+            style={{ marginBottom: spacing.lg }}
+          >
+            You can still view and download your existing reports, but new
+            submissions are paused. Please contact the administrator to
+            reactivate your account.
+          </Alert>
+        )}
+
         {error && (
           <Alert variant="error" title="Could not load your jobs" style={{ marginBottom: spacing.lg }}>
             {error}
@@ -267,6 +280,8 @@ export default function Dashboard() {
                 >
                   {isPending
                     ? 'Available once your account is approved.'
+                    : isSuspended
+                    ? 'Uploads are paused while your account is suspended.'
                     : billingEnabled
                     ? 'Add credits to start a new submission.'
                     : 'Available once your account is approved.'}

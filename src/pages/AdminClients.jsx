@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import AccountStatusIcon from '../components/AccountStatusIcon.jsx';
 import Alert from '../components/Alert.jsx';
 import Button from '../components/Button.jsx';
 import FormField from '../components/FormField.jsx';
@@ -84,8 +85,10 @@ const statusPill = (status) => {
   return (
     <span
       style={{
-        display: 'inline-block',
-        padding: '3px 10px',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 6,
+        padding: '3px 10px 3px 4px',
         borderRadius: 999,
         background: m.bg,
         border: `1px solid ${m.border}`,
@@ -97,6 +100,7 @@ const statusPill = (status) => {
         textTransform: 'uppercase',
       }}
     >
+      <AccountStatusIcon status={status} size={15} />
       {m.label}
     </span>
   );

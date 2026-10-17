@@ -1,6 +1,7 @@
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/auth.jsx';
 import { useSettings } from '../lib/settings.jsx';
+import AccountStatusIcon from './AccountStatusIcon.jsx';
 import {
   colors,
   gradients,
@@ -120,7 +121,14 @@ const userPillStyle = {
   borderRadius: radii.pill,
   background: 'rgba(255,255,255,0.06)',
   border: '1px solid rgba(255,255,255,0.08)',
-  maxWidth: '180px',
+  maxWidth: '200px',
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 7,
+};
+
+const pillLabelStyle = {
+  minWidth: 0,
   whiteSpace: 'nowrap',
   overflow: 'hidden',
   textOverflow: 'ellipsis',
@@ -151,10 +159,13 @@ export default function Header() {
 
   const displayLabel =
     profile?.company_name || profile?.contact_name || user?.email || '';
+  // Pending accounts already get the "Pending approval" badge.
+  const hasStatusMark =
+    profile?.status === 'active' || profile?.status === 'suspended';
 
   return (
     <header style={headerStyle}>
-      <div className="container" style={innerStyle}>
+      <div className="container hdr-inner" style={innerStyle}>
         <Link
           to={isAuthenticated ? '/dashboard' : '/'}
           style={brandStyle}
@@ -167,12 +178,13 @@ export default function Header() {
               <img
                 src={brand.wordmark}
                 alt={brand.productName}
+                className="hdr-wordmark"
                 style={{ height: 34, width: 'auto', display: 'block' }}
                 onError={(e) => {
                   e.currentTarget.style.display = 'none';
                 }}
               />
-              <span style={taglineStyle}>{brand.tagline}</span>
+              <span className="hdr-tagline" style={taglineStyle}>{brand.tagline}</span>
             </span>
           ) : (
             <>
@@ -186,17 +198,18 @@ export default function Header() {
               />
               <span style={wordmarkStyle}>
                 <span style={productNameStyle}>{brand.productName}</span>
-                <span style={taglineStyle}>{brand.tagline}</span>
+                <span className="hdr-tagline" style={taglineStyle}>{brand.tagline}</span>
               </span>
             </>
           )}
         </Link>
 
-        <nav style={navStyle} aria-label="Primary">
+        <nav className="hdr-nav" style={navStyle} aria-label="Primary">
           {!isAuthenticated && (
             <>
               <NavLink
                 to="/privacy"
+                className="hdr-hide-sm"
                 style={({ isActive }) => ({
                   ...linkBase,
                   color: isActive ? colors.textOnDark : colors.textOnDarkMuted,
@@ -206,6 +219,7 @@ export default function Header() {
               </NavLink>
               <NavLink
                 to="/confidentiality"
+                className="hdr-hide-sm"
                 style={({ isActive }) => ({
                   ...linkBase,
                   color: isActive ? colors.textOnDark : colors.textOnDarkMuted,
@@ -232,8 +246,22 @@ export default function Header() {
                 </span>
               )}
               {displayLabel && (
-                <span style={userPillStyle} title={displayLabel}>
-                  {displayLabel}
+                <span
+                  style={userPillStyle}
+                  title={
+                    hasStatusMark
+                      ? `${displayLabel} · ${
+                          profile.status === 'active'
+                            ? 'Account approved'
+                            : 'Account suspended'
+                        }`
+                      : displayLabel
+                  }
+                >
+                  {hasStatusMark && (
+                    <AccountStatusIcon status={profile.status} size={15} />
+                  )}
+                  <span style={pillLabelStyle}>{displayLabel}</span>
                 </span>
               )}
               <button
