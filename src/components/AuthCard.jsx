@@ -1,3 +1,4 @@
+import { useSettings } from '../lib/settings.jsx';
 import { colors, fonts, radii, shadows, spacing } from '../styles/theme.js';
 
 const wrapStyle = {
@@ -11,10 +12,18 @@ const cardStyle = {
   background: colors.cardBg,
   border: `1px solid ${colors.cardBorder}`,
   borderRadius: radii.lg,
-  boxShadow: shadows.card,
+  boxShadow: shadows.raised,
   padding: spacing.xl,
   width: '100%',
   maxWidth: '460px',
+};
+
+const brandRowStyle = {
+  display: 'flex',
+  justifyContent: 'center',
+  paddingBottom: spacing.lg,
+  marginBottom: spacing.lg,
+  borderBottom: `1px solid ${colors.cardBorder}`,
 };
 
 const titleStyle = {
@@ -32,6 +41,7 @@ const subStyle = {
 };
 
 export default function AuthCard({ title, subtitle, children, footer }) {
+  const { brand } = useSettings();
   return (
     <div style={wrapStyle}>
       <div
@@ -39,6 +49,18 @@ export default function AuthCard({ title, subtitle, children, footer }) {
         style={{ display: 'flex', justifyContent: 'center' }}
       >
         <div style={cardStyle}>
+          {brand.wordmarkLight && (
+            <div style={brandRowStyle}>
+              <img
+                src={brand.wordmarkLight}
+                alt={brand.productName}
+                style={{ height: 30, width: 'auto', display: 'block' }}
+                onError={(e) => {
+                  e.currentTarget.parentElement.style.display = 'none';
+                }}
+              />
+            </div>
+          )}
           {title && <h1 style={titleStyle}>{title}</h1>}
           {subtitle && <p style={subStyle}>{subtitle}</p>}
           {children}
