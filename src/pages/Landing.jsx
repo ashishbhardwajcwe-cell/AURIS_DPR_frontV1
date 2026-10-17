@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom';
 import AudioBriefingPreview from '../components/AudioBriefingPreview.jsx';
-import ReportPreview from '../components/ReportPreview.jsx';
 import { useAuth } from '../lib/auth.jsx';
 import { useSettings } from '../lib/settings.jsx';
 import {
@@ -15,30 +14,29 @@ import {
 // `min(100%, …)` keeps auto-fit grids from overflowing on phones.
 const fitColumns = (min) => `repeat(auto-fit, minmax(min(100%, ${min}px), 1fr))`;
 
+// Hero background: the navy sweep, with the bottom band repainted in the
+// page colour so the report "product shot" straddles dark and light.
+const HERO_LIGHT_BAND = 300;
+
 const heroStyle = {
-  background: gradients.hero,
+  background: [
+    `linear-gradient(180deg, transparent calc(100% - ${HERO_LIGHT_BAND}px), ${colors.pageBg} calc(100% - ${HERO_LIGHT_BAND}px))`,
+    gradients.hero,
+  ].join(', '),
   color: colors.textOnDark,
-  paddingTop: spacing['3xl'],
-  paddingBottom: spacing['3xl'],
+  paddingTop: spacing['2xl'],
+  paddingBottom: spacing['2xl'],
   overflow: 'hidden',
 };
 
-const heroGridStyle = {
-  display: 'grid',
-  gridTemplateColumns: fitColumns(400),
-  alignItems: 'center',
-  gap: '56px',
-};
-
-const heroTextStyle = {
+const heroIntroStyle = {
+  maxWidth: '920px',
+  margin: '0 auto',
+  textAlign: 'center',
   display: 'flex',
   flexDirection: 'column',
-  gap: spacing.lg,
-};
-
-const heroVisualStyle = {
-  display: 'flex',
-  justifyContent: 'center',
+  alignItems: 'center',
+  gap: '20px',
 };
 
 const eyebrowStyle = {
@@ -52,24 +50,25 @@ const eyebrowStyle = {
 
 const headlineStyle = {
   fontFamily: fonts.heading,
-  fontSize: 'clamp(32px, 4.2vw, 50px)',
+  fontSize: 'clamp(32px, 4.4vw, 52px)',
   lineHeight: 1.1,
   color: colors.textOnDark,
 };
 
 const subStyle = {
   fontFamily: fonts.body,
-  fontSize: '17px',
+  fontSize: '17.5px',
   lineHeight: 1.6,
   color: colors.textOnDarkMuted,
-  maxWidth: '640px',
+  maxWidth: '720px',
 };
 
 const ctaRowStyle = {
   display: 'flex',
   flexWrap: 'wrap',
+  justifyContent: 'center',
   gap: spacing.md,
-  marginTop: spacing.sm,
+  marginTop: spacing.xs,
 };
 
 const primaryCta = {
@@ -98,23 +97,51 @@ const secondaryCta = {
   display: 'inline-block',
 };
 
-const chipRowStyle = {
-  display: 'flex',
-  flexWrap: 'wrap',
-  gap: '8px 10px',
+const stageStyle = {
+  position: 'relative',
+  maxWidth: '1000px',
+  margin: '48px auto 0',
 };
 
-const chipStyle = {
+const reportFrameStyle = {
+  borderRadius: radii.lg,
+  overflow: 'hidden',
+  background: colors.cardBg,
+  border: '1px solid rgba(255, 255, 255, 0.16)',
+  boxShadow:
+    '0 40px 90px rgba(4, 8, 20, 0.45), 0 0 0 8px rgba(255, 255, 255, 0.04)',
+};
+
+const heroImgStyle = {
+  display: 'block',
+  width: '100%',
+  height: 'auto',
+};
+
+const scoreFrameStyle = {
+  borderRadius: radii.lg,
+  overflow: 'hidden',
+  border: '1px solid rgba(200, 162, 75, 0.45)',
+  boxShadow: '0 30px 60px rgba(4, 8, 20, 0.45)',
+};
+
+const captionRowStyle = {
+  display: 'flex',
+  flexWrap: 'wrap',
+  justifyContent: 'center',
+  alignItems: 'center',
+  gap: '12px 28px',
+  fontFamily: fonts.body,
+  fontSize: '14.5px',
+  color: colors.textSecondary,
+};
+
+const captionItemStyle = {
   display: 'inline-flex',
   alignItems: 'center',
-  gap: 7,
-  fontFamily: fonts.body,
-  fontSize: '13px',
-  color: colors.textOnDarkMuted,
-  padding: '6px 12px',
-  borderRadius: radii.pill,
-  background: 'rgba(255,255,255,0.05)',
-  border: '1px solid rgba(255,255,255,0.1)',
+  gap: 8,
+  fontWeight: 500,
+  color: colors.textPrimary,
 };
 
 const sectionStyle = {
@@ -153,11 +180,77 @@ const sectionLeadStyle = {
   marginTop: spacing.md,
 };
 
+const impactStyle = {
+  background: gradients.hero,
+  color: colors.textOnDark,
+  borderRadius: radii.xl,
+  boxShadow: shadows.raised,
+  padding: 'clamp(28px, 5vw, 56px)',
+};
+
+const impactHeadingStyle = {
+  fontFamily: fonts.heading,
+  fontSize: 'clamp(26px, 3.4vw, 40px)',
+  lineHeight: 1.15,
+  color: colors.textOnDark,
+};
+
+const statGridStyle = {
+  display: 'grid',
+  gridTemplateColumns: fitColumns(190),
+  gap: spacing.md,
+  marginTop: spacing.xl,
+};
+
+const statCardStyle = {
+  background: 'rgba(255, 255, 255, 0.04)',
+  border: '1px solid rgba(255, 255, 255, 0.08)',
+  borderRadius: radii.md,
+  padding: '26px 20px',
+  textAlign: 'center',
+};
+
+const statValueStyle = {
+  fontFamily: fonts.heading,
+  fontSize: 'clamp(34px, 4vw, 46px)',
+  fontWeight: 700,
+  lineHeight: 1.05,
+  color: '#E2BC63',
+};
+
+const statLabelStyle = {
+  marginTop: 10,
+  fontFamily: fonts.body,
+  fontSize: '12px',
+  fontWeight: 600,
+  letterSpacing: '0.14em',
+  textTransform: 'uppercase',
+  color: colors.textOnDarkMuted,
+};
+
 const showcaseGridStyle = {
   display: 'grid',
   gridTemplateColumns: fitColumns(420),
   alignItems: 'center',
   gap: '48px',
+};
+
+const sampleImgStyle = {
+  display: 'block',
+  width: '100%',
+  height: 'auto',
+  borderRadius: radii.lg,
+  border: `1px solid ${colors.cardBorder}`,
+  background: colors.cardBg,
+  boxShadow: shadows.raised,
+};
+
+const captionStyle = {
+  marginTop: spacing.md,
+  fontFamily: fonts.body,
+  fontSize: '13.5px',
+  lineHeight: 1.55,
+  color: colors.textMuted,
 };
 
 const featureListStyle = {
@@ -315,6 +408,38 @@ const ICONS = {
   ),
 };
 
+// Report images are cropped from real reports. The road, place, altitude,
+// project name and project figures are painted out (not blurred), so
+// nothing is recoverable.
+const HERO_REPORT = {
+  src: '/samples/report-a3.webp',
+  width: 1600,
+  height: 1034,
+  alt: 'A3 DPR Analysis Report: executive summary with 68% compliance, moderate risk, 5 critical, 8 major and 5 minor findings, and a quick-reference table of issues, IRC clauses and recommendations. Project details are redacted.',
+};
+
+const HERO_SCORECARD = {
+  src: '/samples/report-scorecard.webp',
+  width: 1200,
+  height: 835,
+  alt: 'Online analysis scorecard: 58% compliance, high risk, 7 critical, 7 major and 5 minor findings. The project summary is redacted.',
+};
+
+const FINDING = {
+  src: '/samples/report-finding.webp',
+  width: 1200,
+  height: 942,
+  alt: 'A critical pavement finding citing IRC:37-2018, with its impact and recommended fix. Project-specific details are redacted.',
+};
+
+// The impact slide from the DPR Analyzer Pro capability brief.
+const IMPACT = [
+  { value: '~99%', label: 'Review time saved' },
+  { value: '14', label: 'Codes checked, every time' },
+  { value: '4–5 min', label: 'Spoken audit briefing' },
+  { value: 'A3', label: 'Print-ready report' },
+];
+
 const DELIVERABLES = [
   {
     icon: 'gauge',
@@ -324,7 +449,7 @@ const DELIVERABLES = [
   {
     icon: 'findings',
     title: 'Classified, clause-traced findings',
-    body: 'Every gap graded critical, major or minor and traced to the relevant IRC or MoRTH provision, with a recommended fix.',
+    body: 'Every gap graded critical, major or minor and traced to the relevant IRC or MoRTH provision, with its impact and a recommended fix.',
   },
   {
     icon: 'report',
@@ -388,8 +513,8 @@ export default function Landing() {
   return (
     <>
       <section style={heroStyle}>
-        <div className="container" style={heroGridStyle}>
-          <div style={heroTextStyle}>
+        <div className="container">
+          <div style={heroIntroStyle}>
             <span style={eyebrowStyle}>{brand.eyebrow}</span>
             <h1 style={headlineStyle}>
               Compliance analysis for road &amp; highway DPRs — delivered as a
@@ -406,23 +531,76 @@ export default function Landing() {
                 How we handle your data
               </Link>
             </div>
-            <div style={chipRowStyle}>
-              <span style={chipStyle}>
-                <Icon size={15}>{ICONS.report}</Icon>
-                Compliance report
-              </span>
-              <span style={chipStyle}>
-                <Icon size={15}>{ICONS.audio}</Icon>
-                Audio briefing
-              </span>
-              <span style={chipStyle}>
-                <Icon size={15}>{ICONS.findings}</Icon>
-                IRC &amp; MoRTH standards
-              </span>
+          </div>
+
+          {/* Product shot: the A3 report, with the online scorecard and
+              the audio briefing floating over its corners (stacked on
+              phones — see .hero-float in global.css). */}
+          <div style={stageStyle}>
+            <div style={reportFrameStyle}>
+              <img
+                src={HERO_REPORT.src}
+                alt={HERO_REPORT.alt}
+                width={HERO_REPORT.width}
+                height={HERO_REPORT.height}
+                fetchpriority="high"
+                style={heroImgStyle}
+              />
+            </div>
+            <div className="hero-float hero-float-score">
+              <div style={scoreFrameStyle}>
+                <img
+                  src={HERO_SCORECARD.src}
+                  alt={HERO_SCORECARD.alt}
+                  width={HERO_SCORECARD.width}
+                  height={HERO_SCORECARD.height}
+                  style={heroImgStyle}
+                />
+              </div>
+            </div>
+            <div className="hero-float hero-float-audio">
+              <AudioBriefingPreview compact />
             </div>
           </div>
-          <div style={heroVisualStyle}>
-            <AudioBriefingPreview />
+
+          <div className="hero-captions" style={captionRowStyle}>
+            <span style={captionItemStyle}>
+              <Icon size={17}>{ICONS.report}</Icon>
+              Print-ready A3 report
+            </span>
+            <span style={captionItemStyle}>
+              <Icon size={17}>{ICONS.gauge}</Icon>
+              Online scorecard &amp; findings
+            </span>
+            <span style={captionItemStyle}>
+              <Icon size={17}>{ICONS.audio}</Icon>
+              4–5 min audio briefing
+            </span>
+            <span>Real output · project details redacted</span>
+          </div>
+        </div>
+      </section>
+
+      <section style={{ paddingTop: spacing.xl }}>
+        <div className="container">
+          <div style={impactStyle}>
+            <span style={{ ...sectionEyebrowStyle, color: colors.gold }}>The impact</span>
+            <h2 style={impactHeadingStyle}>
+              Faster. More consistent.{' '}
+              <em style={{ color: '#E2BC63' }}>Now audible.</em>
+            </h2>
+            <p style={{ ...sectionLeadStyle, color: colors.textOnDarkMuted, maxWidth: 760 }}>
+              Senior-engineer time saved, review quality standardised, and the
+              verdict delivered in a form decision-makers can take in anywhere.
+            </p>
+            <div style={statGridStyle}>
+              {IMPACT.map((s) => (
+                <div key={s.label} style={statCardStyle}>
+                  <div style={statValueStyle}>{s.value}</div>
+                  <div style={statLabelStyle}>{s.label}</div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
@@ -432,18 +610,29 @@ export default function Landing() {
           <div style={sectionIntroStyle}>
             <span style={sectionEyebrowStyle}>What you receive</span>
             <h2 style={sectionHeading}>
-              A compliance report and an audio briefing for every DPR
+              Every finding explained, traced and fixed
             </h2>
             <p style={sectionLeadStyle}>
-              Here is what the deliverables look like. The sample is
-              illustrative: figures are indicative and clause-level detail is
-              redacted.
+              Each gap in the DPR is graded by severity, tied to the IRC or
+              MoRTH clause it breaches, and paired with its impact and a
+              practical correction.
             </p>
           </div>
           <div style={showcaseGridStyle}>
-            <div style={{ display: 'flex', justifyContent: 'center' }}>
-              <ReportPreview brand={brand} />
-            </div>
+            <figure style={{ margin: 0 }}>
+              <img
+                src={FINDING.src}
+                alt={FINDING.alt}
+                width={FINDING.width}
+                height={FINDING.height}
+                loading="lazy"
+                decoding="async"
+                style={sampleImgStyle}
+              />
+              <figcaption style={captionStyle}>
+                A finding from a real report · project details redacted
+              </figcaption>
+            </figure>
             <ul style={featureListStyle}>
               {DELIVERABLES.map((d) => (
                 <li key={d.title} style={featureItemStyle}>
