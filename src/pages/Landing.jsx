@@ -18,24 +18,19 @@ const fitColumns = (min) => `repeat(auto-fit, minmax(min(100%, ${min}px), 1fr))`
 // page colour so the report "product shot" straddles dark and light.
 const HERO_LIGHT_BAND = 300;
 
+// Layout that changes between phone and laptop (alignment, columns,
+// background band, float positions) lives in the .hero-* classes in
+// global.css; these inline styles hold only what stays the same.
 const heroStyle = {
-  background: [
-    `linear-gradient(180deg, transparent calc(100% - ${HERO_LIGHT_BAND}px), ${colors.pageBg} calc(100% - ${HERO_LIGHT_BAND}px))`,
-    gradients.hero,
-  ].join(', '),
+  '--hero-gradient': gradients.hero,
+  '--hero-band': `linear-gradient(180deg, transparent calc(100% - ${HERO_LIGHT_BAND}px), ${colors.pageBg} calc(100% - ${HERO_LIGHT_BAND}px))`,
   color: colors.textOnDark,
-  paddingTop: spacing['2xl'],
-  paddingBottom: spacing['2xl'],
   overflow: 'hidden',
 };
 
 const heroIntroStyle = {
-  maxWidth: '920px',
-  margin: '0 auto',
-  textAlign: 'center',
   display: 'flex',
   flexDirection: 'column',
-  alignItems: 'center',
   gap: '20px',
 };
 
@@ -50,14 +45,12 @@ const eyebrowStyle = {
 
 const headlineStyle = {
   fontFamily: fonts.heading,
-  fontSize: 'clamp(32px, 4.4vw, 52px)',
   lineHeight: 1.1,
   color: colors.textOnDark,
 };
 
 const subStyle = {
   fontFamily: fonts.body,
-  fontSize: '17.5px',
   lineHeight: 1.6,
   color: colors.textOnDarkMuted,
   maxWidth: '720px',
@@ -66,7 +59,6 @@ const subStyle = {
 const ctaRowStyle = {
   display: 'flex',
   flexWrap: 'wrap',
-  justifyContent: 'center',
   gap: spacing.md,
   marginTop: spacing.xs,
 };
@@ -99,8 +91,38 @@ const secondaryCta = {
 
 const stageStyle = {
   position: 'relative',
-  maxWidth: '1000px',
-  margin: '48px auto 0',
+};
+
+// Laptop-only list of the three deliverables under the buttons (on phones
+// the same items sit in the caption row under the product shot).
+const pointsStyle = {
+  listStyle: 'none',
+  margin: '8px 0 0',
+  padding: 0,
+  flexDirection: 'column',
+  gap: 12,
+  fontFamily: fonts.body,
+  fontSize: '15px',
+  color: colors.textOnDarkMuted,
+};
+
+const pointStyle = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 10,
+};
+
+const pointIconStyle = {
+  width: 30,
+  height: 30,
+  borderRadius: '50%',
+  flexShrink: 0,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  color: '#E2BC63',
+  background: 'rgba(200, 162, 75, 0.12)',
+  border: '1px solid rgba(200, 162, 75, 0.3)',
 };
 
 const reportFrameStyle = {
@@ -126,7 +148,6 @@ const scoreFrameStyle = {
 };
 
 const captionRowStyle = {
-  display: 'flex',
   flexWrap: 'wrap',
   justifyContent: 'center',
   alignItems: 'center',
@@ -432,6 +453,12 @@ const FINDING = {
   alt: 'A critical pavement finding citing IRC:37-2018, with its impact and recommended fix. Project-specific details are redacted.',
 };
 
+const HERO_POINTS = [
+  { icon: 'report', label: 'Print-ready A3 report' },
+  { icon: 'gauge', label: 'Online scorecard & findings' },
+  { icon: 'audio', label: '4–5 min audio briefing' },
+];
+
 // The impact slide from the DPR Analyzer Pro capability brief.
 const IMPACT = [
   { value: '~99%', label: 'Review time saved' },
@@ -512,32 +539,45 @@ export default function Landing() {
 
   return (
     <>
-      <section style={heroStyle}>
-        <div className="container">
-          <div style={heroIntroStyle}>
+      <section className="hero" style={heroStyle}>
+        <div className="container hero-grid">
+          <div className="hero-intro" style={heroIntroStyle}>
             <span style={eyebrowStyle}>{brand.eyebrow}</span>
-            <h1 style={headlineStyle}>
+            <h1 className="hero-title" style={headlineStyle}>
               Compliance analysis for road &amp; highway DPRs — delivered as a
               report and an audio overview.
             </h1>
-            <p style={subStyle}>
+            <p className="hero-sub" style={subStyle}>
               Upload your Detailed Project Report and receive a structured
               compliance review against IRC and MoRTH standards, prepared by
               qualified analysts. {brand.audience}
             </p>
-            <div style={ctaRowStyle}>
+            <div className="hero-ctas" style={ctaRowStyle}>
               {mainCta}
               <Link to="/privacy" style={secondaryCta}>
                 How we handle your data
               </Link>
             </div>
+            <ul className="hero-points" style={pointsStyle}>
+              {HERO_POINTS.map((p) => (
+                <li key={p.label} style={pointStyle}>
+                  <span style={pointIconStyle}>
+                    <Icon size={15}>{ICONS[p.icon]}</Icon>
+                  </span>
+                  {p.label}
+                </li>
+              ))}
+              <li style={{ ...pointStyle, fontSize: '13px', opacity: 0.75 }}>
+                Real output · project details redacted
+              </li>
+            </ul>
           </div>
 
           {/* Product shot: the A3 report, with the online scorecard and
-              the audio briefing floating over its corners (stacked on
-              phones — see .hero-float in global.css). */}
-          <div style={stageStyle}>
-            <div style={reportFrameStyle}>
+              the audio briefing floating over its corners. Beside the text
+              on laptops, below it on phones (.hero-* in global.css). */}
+          <div className="hero-stage" style={stageStyle}>
+            <div className="hero-report" style={reportFrameStyle}>
               <img
                 src={HERO_REPORT.src}
                 alt={HERO_REPORT.alt}
@@ -564,18 +604,12 @@ export default function Landing() {
           </div>
 
           <div className="hero-captions" style={captionRowStyle}>
-            <span style={captionItemStyle}>
-              <Icon size={17}>{ICONS.report}</Icon>
-              Print-ready A3 report
-            </span>
-            <span style={captionItemStyle}>
-              <Icon size={17}>{ICONS.gauge}</Icon>
-              Online scorecard &amp; findings
-            </span>
-            <span style={captionItemStyle}>
-              <Icon size={17}>{ICONS.audio}</Icon>
-              4–5 min audio briefing
-            </span>
+            {HERO_POINTS.map((p) => (
+              <span key={p.label} style={captionItemStyle}>
+                <Icon size={17}>{ICONS[p.icon]}</Icon>
+                {p.label}
+              </span>
+            ))}
             <span>Real output · project details redacted</span>
           </div>
         </div>
