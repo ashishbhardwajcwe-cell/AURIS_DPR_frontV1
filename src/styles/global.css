@@ -118,9 +118,45 @@ textarea {
   }
 }
 
-/* Landing hero "product shot": the online scorecard and the audio player
-   float over the corners of the A3 report image. Below 900px they stack
-   under it instead. */
+/* Landing hero.
+   Phones and tablets: centred text, then the "product shot" (A3 report with
+   the scorecard and audio player over its corners) underneath; below 900px
+   the three pieces stack. Laptops (1080px+): text on the left, product shot
+   on the right, so all three deliverables are visible on the first screen. */
+.hero {
+  background: var(--hero-band), var(--hero-gradient);
+  padding-top: 48px;
+  padding-bottom: 48px;
+}
+
+.hero-intro {
+  max-width: 920px;
+  margin: 0 auto;
+  text-align: center;
+  align-items: center;
+}
+
+.hero-title {
+  font-size: clamp(32px, 4.4vw, 52px);
+}
+
+.hero-sub {
+  font-size: 17.5px;
+}
+
+.hero-ctas {
+  justify-content: center;
+}
+
+.hero-points {
+  display: none;
+}
+
+.hero-stage {
+  max-width: 1000px;
+  margin: 48px auto 0;
+}
+
 .hero-float {
   position: absolute;
   z-index: 2;
@@ -139,6 +175,7 @@ textarea {
 }
 
 .hero-captions {
+  display: flex;
   margin-top: 88px;
 }
 
@@ -164,6 +201,73 @@ textarea {
   }
   .hero-captions {
     margin-top: 32px;
+  }
+}
+
+@media (min-width: 1080px) {
+  .hero {
+    background: var(--hero-gradient);
+    padding-top: 48px;
+    padding-bottom: 64px;
+  }
+  .hero-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+    align-items: center;
+    column-gap: 64px;
+  }
+  .hero-intro {
+    max-width: none;
+    margin: 0;
+    text-align: left;
+    align-items: flex-start;
+  }
+  .hero-title {
+    font-size: clamp(34px, 2.95vw, 44px);
+  }
+  .hero-sub {
+    font-size: 16.5px;
+  }
+  .hero-ctas {
+    justify-content: flex-start;
+  }
+  .hero-points {
+    display: flex;
+  }
+  /* Room above for the scorecard and below for the audio card. */
+  .hero-stage {
+    max-width: none;
+    margin: 48px 0 120px;
+  }
+  /* Soft teal glow behind the product shot. */
+  .hero-stage::before {
+    content: '';
+    position: absolute;
+    inset: -12% -10%;
+    background: radial-gradient(closest-side, rgba(20, 184, 166, 0.22), rgba(20, 184, 166, 0) 72%);
+    pointer-events: none;
+  }
+  .hero-report {
+    position: relative;
+    z-index: 1;
+  }
+  /* Both floats sit on the report's right side, leaving its title,
+     summary, score row and issue columns readable on the left. */
+  .hero-float-score {
+    top: -48px;
+    right: -24px;
+    width: 44%;
+  }
+  .hero-float-audio {
+    left: auto;
+    right: -24px;
+    bottom: -128px;
+    width: 300px;
+    transform: scale(0.88);
+    transform-origin: bottom right;
+  }
+  .hero-captions {
+    display: none;
   }
 }
 
