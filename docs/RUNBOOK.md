@@ -7,7 +7,8 @@ when the UI can't, or when the audit trail needs forensics.
 
 For first-time setup, see **[SETUP.md](SETUP.md)** instead.
 
-Runtime toggles — billing on/off and the active brand (AURIS / BRO / RS) —
+Runtime toggles — billing on/off and the active brand (BRO for departmental
+use, AURIS for commercial use) —
 live in the `app_settings` table (see `docs/sql/05_app_settings.sql`) and
 are flipped from **Admin → Settings** (`/admin/settings`). Changes take
 effect on the client's next refresh; no redeploy needed. Default state is

@@ -1,18 +1,24 @@
 // Brand identities. Switch the active one at runtime from Admin → Settings
 // (persisted in app_settings.active_brand). Logo files live in /public.
+//
+// Both brands share the DPR Analyzer Pro product wordmark; the organisation
+// (BRO for departmental use, AURIS for commercial use) shows in the eyebrow,
+// footer, browser tab, favicon and the sample report's emblem.
 export const BRANDS = {
   auris: {
     key: 'auris',
-    logo: '/auris-logo.png',
-    logoIcon: '/auris-logo-icon.png',
+    logo: '/auris-logo.png',                  // gold "A" emblem (fallback only)
+    logoIcon: '/auris-logo-icon.png',         // square icon for the browser tab
+    wordmark: '/dpr-wordmark-on-dark.png',    // product wordmark for the dark header
+    wordmarkLight: '/dpr-wordmark-on-light.png', // navy wordmark for white cards (login/sign-up)
     productName: 'DPR Analyzer Pro',
-    tagline: 'AI-Assisted DPR Compliance Analysis · Road & Highway Projects',
+    tagline: 'AI-Based DPR Compliance Engine',
     orgName: 'AURIS',
     audience: 'Built for consultancy firms working with NHAI, MoRTH, PWD, and BRO.',
     eyebrow: 'AURIS · DPR Analyzer Pro',
     footerText: '© AURIS · DPR Analyzer Pro',
     docTitle: 'DPR Analyzer Pro · AURIS',
-    themeColor: '#0F3460',
+    themeColor: '#0E1320',
   },
   bro: {
     key: 'bro',
@@ -29,29 +35,14 @@ export const BRANDS = {
     docTitle: 'DPR Analyzer Pro · BRO',
     themeColor: '#0E1320',
   },
-  // Placeholder for the future "RS" brand — fill in strings and add rs-logo.png
-  // to /public when ready. Kept here so the admin dropdown already lists it.
-  rs: {
-    key: 'rs',
-    logo: '/rs-logo.png',
-    logoIcon: '/rs-logo-icon.png',
-    wordmark: '/dpr-wordmark-on-dark.png',    // reuses the product wordmark on the dark header
-    wordmarkLight: '/dpr-wordmark-on-light.png',
-    productName: 'DPR Analyzer Pro',
-    tagline: 'AI-Based DPR Compliance Engine',
-    orgName: 'RS',
-    audience: 'Built for road and highway project teams.',
-    eyebrow: 'RS · DPR Analyzer Pro',
-    footerText: '© RS · DPR Analyzer Pro',
-    docTitle: 'DPR Analyzer Pro · RS',
-    themeColor: '#0E1320',
-  },
-  // NOTE: the `auris` brand has no `wordmark` field on purpose — brands without
-  // one fall back to the square logo + text-name layout (see Header step below).
 };
+
+// The old placeholder "rs" brand was replaced by AURIS. A database still
+// holding "rs" shows AURIS rather than silently falling back to BRO.
+const LEGACY_KEYS = { rs: 'auris' };
 
 export const DEFAULT_BRAND = 'bro';
 export const BRAND_KEYS = Object.keys(BRANDS);
 export function getBrand(key) {
-  return BRANDS[key] || BRANDS[DEFAULT_BRAND];
+  return BRANDS[LEGACY_KEYS[key] ?? key] || BRANDS[DEFAULT_BRAND];
 }

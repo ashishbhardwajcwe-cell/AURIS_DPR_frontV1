@@ -92,7 +92,9 @@ function brandLabel(key) {
 }
 
 export default function AdminSettings() {
-  const { billingEnabled, brandKey, refreshSettings } = useSettings();
+  // brand.key (not the raw stored key) so a legacy value like "rs" shows
+  // as the brand actually in use.
+  const { billingEnabled, brand, refreshSettings } = useSettings();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [savedFlash, setSavedFlash] = useState(false);
@@ -177,7 +179,7 @@ export default function AdminSettings() {
           </label>
           <select
             id="brand-select"
-            value={brandKey}
+            value={brand.key}
             disabled={saving}
             onChange={(e) => save('active_brand', e.target.value)}
             style={selectStyle}
