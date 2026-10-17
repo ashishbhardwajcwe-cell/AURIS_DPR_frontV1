@@ -118,6 +118,55 @@ textarea {
   }
 }
 
+/* Landing hero "product shot": the online scorecard and the audio player
+   float over the corners of the A3 report image. Below 900px they stack
+   under it instead. */
+.hero-float {
+  position: absolute;
+  z-index: 2;
+}
+
+.hero-float-score {
+  top: 15%;
+  right: -56px;
+  width: 40%;
+}
+
+.hero-float-audio {
+  left: -56px;
+  bottom: -48px;
+  width: 340px;
+}
+
+.hero-captions {
+  margin-top: 88px;
+}
+
+@media (max-width: 1120px) {
+  .hero-float-score {
+    right: -12px;
+  }
+  .hero-float-audio {
+    left: -12px;
+  }
+}
+
+@media (max-width: 900px) {
+  .hero-float {
+    position: static;
+    width: 100%;
+    max-width: 440px;
+    margin: 20px auto 0;
+  }
+  .hero-float > * {
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .hero-captions {
+    margin-top: 32px;
+  }
+}
+
 /* Button loading spinner */
 @keyframes spin {
   to {

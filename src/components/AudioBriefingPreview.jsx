@@ -21,7 +21,8 @@ const cardStyle = {
   padding: '26px 28px 24px',
   borderRadius: radii.xl,
   background:
-    'linear-gradient(165deg, rgba(28, 48, 87, 0.92) 0%, rgba(14, 19, 32, 0.96) 100%)',
+    // Opaque: in the hero the card sits over the report image.
+    `linear-gradient(165deg, ${colors.navy700} 0%, ${colors.navy900} 100%)`,
   border: '1px solid rgba(200, 162, 75, 0.45)',
   boxShadow:
     '0 32px 64px rgba(4, 8, 20, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.06)',
@@ -154,6 +155,23 @@ const factsStyle = {
   color: colors.textOnDarkMuted,
 };
 
+// Smaller sizing for the hero, where the card overlaps the report image.
+const COMPACT = {
+  card: { maxWidth: 340, padding: '18px 20px 16px' },
+  topRow: { marginBottom: 14 },
+  iconWrap: {
+    width: 54,
+    height: 54,
+    marginBottom: 12,
+    boxShadow: '0 0 0 7px rgba(200, 162, 75, 0.09), 0 0 0 14px rgba(200, 162, 75, 0.04)',
+  },
+  title: { fontSize: '16px', margin: '4px 0 12px' },
+  wave: { height: 40 },
+  controls: { gap: 16, marginTop: 10 },
+  skip: { width: 32, height: 32, fontSize: '10px' },
+  play: { width: 46, height: 46 },
+};
+
 function formatTime(seconds) {
   const t = Math.max(0, Math.floor(seconds || 0));
   return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
@@ -166,7 +184,10 @@ const buttonReset = {
   cursor: 'pointer',
 };
 
-export default function AudioBriefingPreview() {
+export default function AudioBriefingPreview({ compact = false }) {
+  const size = compact ? COMPACT : {};
+  const st = (base, key) => (size[key] ? { ...base, ...size[key] } : base);
+
   const audioRef = useRef(null);
   const [ready, setReady] = useState(false);
   const [playing, setPlaying] = useState(false);
@@ -242,7 +263,7 @@ export default function AudioBriefingPreview() {
 
   return (
     <div
-      style={cardStyle}
+      style={st(cardStyle, 'card')}
       role={ready ? 'region' : 'img'}
       aria-label={
         ready
@@ -250,7 +271,7 @@ export default function AudioBriefingPreview() {
           : 'Sample audio briefing: a podcast-style player summarising a DPR compliance review in about five minutes'
       }
     >
-      <div style={topRowStyle}>
+      <div style={st(topRowStyle, 'topRow')}>
         <span style={sampleTagStyle}>{ready ? 'Listen to a sample' : 'Sample output'}</span>
         <span style={durationStyle}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -260,8 +281,8 @@ export default function AudioBriefingPreview() {
         </span>
       </div>
 
-      <div style={iconWrapStyle}>
-        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <div style={st(iconWrapStyle, 'iconWrap')}>
+        <svg width={compact ? 26 : 34} height={compact ? 26 : 34} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" />
           <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
           <line x1="12" y1="19" x2="12" y2="22" />
@@ -269,9 +290,9 @@ export default function AudioBriefingPreview() {
       </div>
 
       <div style={labelStyle}>DPR Analysis · VoiceOver</div>
-      <div style={titleStyle}>Hill-road DPR · compliance briefing</div>
+      <div style={st(titleStyle, 'title')}>Hill-road DPR · compliance briefing</div>
 
-      <div style={waveStyle} aria-hidden="true">
+      <div style={st(waveStyle, 'wave')} aria-hidden="true">
         {BARS.map((h, i) => {
           const played = i < playedBars;
           return (
@@ -322,38 +343,40 @@ export default function AudioBriefingPreview() {
       </div>
 
       {ready ? (
-        <div style={controlsStyle}>
-          <button type="button" style={{ ...buttonReset, ...skipStyle, background: 'transparent' }} onClick={() => skip(-10)} aria-label="Back 10 seconds">
+        <div style={st(controlsStyle, 'controls')}>
+          <button type="button" style={{ ...buttonReset, ...st(skipStyle, 'skip'), background: 'transparent' }} onClick={() => skip(-10)} aria-label="Back 10 seconds">
             −10
           </button>
-          <button type="button" style={{ ...buttonReset, ...playStyle }} onClick={togglePlay} aria-label={playing ? 'Pause sample briefing' : 'Play sample briefing'}>
+          <button type="button" style={{ ...buttonReset, ...st(playStyle, 'play') }} onClick={togglePlay} aria-label={playing ? 'Pause sample briefing' : 'Play sample briefing'}>
             {playIcon}
           </button>
-          <button type="button" style={{ ...buttonReset, ...skipStyle, background: 'transparent' }} onClick={() => skip(10)} aria-label="Forward 10 seconds">
+          <button type="button" style={{ ...buttonReset, ...st(skipStyle, 'skip'), background: 'transparent' }} onClick={() => skip(10)} aria-label="Forward 10 seconds">
             +10
           </button>
         </div>
       ) : (
-        <div style={controlsStyle} aria-hidden="true">
-          <span style={skipStyle}>−10</span>
-          <span style={playStyle}>{playIcon}</span>
-          <span style={skipStyle}>+10</span>
+        <div style={st(controlsStyle, 'controls')} aria-hidden="true">
+          <span style={st(skipStyle, 'skip')}>−10</span>
+          <span style={st(playStyle, 'play')}>{playIcon}</span>
+          <span style={st(skipStyle, 'skip')}>+10</span>
         </div>
       )}
 
-      <div style={factsStyle} aria-hidden="true">
-        {ready ? (
-          <span>Full briefings run 4–5 minutes</span>
-        ) : (
-          <>
-            <span>Findings consolidated</span>
-            <span>·</span>
-            <span>Plain-spoken</span>
-            <span>·</span>
-            <span>Listen anywhere</span>
-          </>
-        )}
-      </div>
+      {!compact && (
+        <div style={factsStyle} aria-hidden="true">
+          {ready ? (
+            <span>Full briefings run 4–5 minutes</span>
+          ) : (
+            <>
+              <span>Findings consolidated</span>
+              <span>·</span>
+              <span>Plain-spoken</span>
+              <span>·</span>
+              <span>Listen anywhere</span>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }
