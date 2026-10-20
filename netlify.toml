@@ -29,6 +29,20 @@
   status = 301
   force = true
 
+# Second domain (dpranalyzerpro.com, with and without www) is an alias that
+# forwards to the main address, so logins and links stay on one domain.
+[[redirects]]
+  from = "https://dpranalyzerpro.com/*"
+  to = "https://dpranalyzer.com/:splat"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "https://www.dpranalyzerpro.com/*"
+  to = "https://dpranalyzer.com/:splat"
+  status = 301
+  force = true
+
 # SPA fallback — every non-asset, non-API route should serve index.html
 # so React Router can take over on the client. Functions are matched
 # before this redirect runs, so /api/* never falls through to here.
